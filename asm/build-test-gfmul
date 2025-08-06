@@ -1,0 +1,1 @@
+gcc -no-pie gfmul128.s test_gfmul.s -o test_gfmul

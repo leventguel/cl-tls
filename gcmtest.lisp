@@ -1,0 +1,8 @@
+(defun run-gcm-test (pt key iv expected-tag &key aad taglen)
+  (multiple-value-bind (ct tag)
+      (aes-gcm-encrypt pt key iv aad taglen)
+    (format t "~%Computed tag: ~X~%" (byte-vector-to-hex-string tag))
+    (format t "~%Expected tag: ~X~%" (byte-vector-to-hex-string expected-tag))
+    (if (tag-match-p tag expected-tag)
+        (format t "~%✅ TAG MATCHES~%")
+        (format t "~%❌ TAG MISMATCH~%"))))

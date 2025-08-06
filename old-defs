@@ -1,0 +1,64 @@
+(defun trace-aes128-ecb-encrypt-block (plaintext expanded-key &optional (raw nil) (block-size 16))
+  "Prints each transformation stage for one AES-128 ECB block encryption."
+  (let* ((input
+	  (if (or (= (length plaintext) block-size) raw)
+	      plaintext
+	      (pad-pkcs7 plaintext block-size)))
+	 (state (copy-seq input)))
+    
+    (format t "~%🔓 Plaintext: ~{~2,'0X~^ ~}~%" (coerce state 'list))
+    (format t "🔑 KeyAddition (Round 0): ")
+    (setf state (add-round-key state (round-key expanded-key 0)))
+    (format t "~{~2,'0X~^ ~}~%" (coerce state 'list))
+    
+    (dotimes (round 9)
+      (format t "~%=== Round ~D ===~%" (1+ round))
+
+      (setf state (sub-bytes-matrix state))
+      (format t "🧬 SubBytes: ~{~2,'0X~^ ~}~%" (coerce state 'list))
+
+      (setf state (shift-rows state))
+      (format t "🔄 ShiftRows: ~{~2,'0X~^ ~}~%" (coerce state 'list))
+
+      (setf state (mix-columns state))
+      (format t "🔗 MixColumns: ~{~2,'0X~^ ~}~%" (coerce state 'list))
+
+      (setf state (add-round-key state (round-key expanded-key (+ round 1))))
+      (format t "🔐 AddRoundKey:~{~2,'0X~^ ~}~%" (coerce state 'list)))
+    
+    ;; Final Round (no MixColumns)
+    (format t "~%=== Final Round ===~%")
+    (setf state (sub-bytes-matrix state))
+    (format t "🧬 SubBytes: ~{~2,'0X~^ ~}~%" (coerce state 'list))
+    
+    (setf state (shift-rows state))
+    (format t "🔄 ShiftRows: ~{~2,'0X~^ ~}~%" (coerce state 'list))
+    
+    (setf state (add-round-key state (round-key expanded-key 10)))
+    (format t "🔐 Final KeyAdd:~{~2,'0X~^ ~}~%" (coerce state 'list))
+    
+    (format t "~%🧱 Ciphertext: ~{~2,'0X~^ ~}~%" (coerce state 'list))
+    ;; return final ciphertext
+    state))
+
+(defun trace-aes128-ecb (plaintext key &optional (raw nil) (block-size 16))
+  "Encrypts arbitrary-length plaintext in ECB mode with full per-block tracing and PKCS#7 padding."
+  (let* ((padded (if (or (= (mod (length plaintext) block-size) 0) raw)
+		     plaintext
+		     (pad-pkcs7 plaintext block-size)))
+	 (expanded (expand-key-128 (copy-seq key)))
+	 (ciphertext (make-array 0 :element-type '(unsigned-byte 8))))
+    
+    (loop for i from 0 below (length padded) by block-size
+	  for block = (subseq padded i (+ i block-size))
+	  for index = (/ i block-size)
+	  for encrypted = (progn
+			    (format t "~%=== Block ~D ===~%" index)
+			    (trace-aes128-ecb-encrypt-block block expanded raw))
+	  do (setf ciphertext
+		   (concatenate '(vector (unsigned-byte 8)) ciphertext encrypted)))
+    
+    (format t "~%🧱 Final Full Ciphertext:~%")
+    (dotimes (i (floor (length ciphertext) 16))
+      (format t "~{~2,'0X~^ ~}~%" (coerce (subseq ciphertext (* i 16) (+ (* i 16) 16)) 'list)))
+    ciphertext))

@@ -1,0 +1,5 @@
+(load "sha1.lisp")
+(load "sha224.lisp")
+(load "sha256.lisp")
+(load "sha384.lisp")
+(load "sha512.lisp")

@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+
+# Check if argument was provided
+if [ -z "$1" ]; then
+  echo "Usage: $0 <test number>"
+  exit 1
+fi
+
+# Compile with the passed test number
+gcc -maes -mpclmul -msse2 -msse4 \
+  aes_gcm.c key_schedule.c gfmul128.s decrypt.c gcm_main.c \
+  -o AES128_GCM-assembly"$1" -DTEST"$1"
