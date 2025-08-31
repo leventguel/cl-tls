@@ -23,8 +23,7 @@
 (load "rsp/test-des-mac.lisp")
 
 (defpackage :tls-aes-all-test
-  (:use :cl :parse-utils :shared-utils :des-utils :tls-aes-utils :tls-aes128 :tls-aes192 :tls-aes256 :tls-aes-ghash :tls-aes128-gcm
-	:tls-aes192-gcm :tls-aes256-gcm :tls-aes-rsp128-parser :tls-aes-rsp192-parser :tls-aes-rsp256-parser
+  (:use :cl :parse-utils :shared-utils :des-utils :tls-aes-utils :tls-aes128 :tls-aes192 :tls-aes256 :tls-aes-ghash :tls-aes128-gcm :tls-aes192-gcm :tls-aes256-gcm :tls-aes-rsp128-parser :tls-aes-rsp192-parser :tls-aes-rsp256-parser
 	:aes128rsp-test :aes192rsp-test :aes256rsp-test :des-mac-parser :des-mac-test))
 
 (in-package :tls-aes-all-test)
@@ -103,8 +102,8 @@
 
 (defun test-192cmac ()
 "tests the CMAC modes for aes192"
-(test-cmac192-rsp           "rsp/cmac/CMACGenAES192.rsp")
-(test-cmac192-rsp-verify    "rsp/cmac/CMACVerAES192.rsp"))
+(test-aes192-cmac-rsp           "rsp/cmac/CMACGenAES192.rsp")
+(test-aes192-cmac-rsp-verify    "rsp/cmac/CMACVerAES192.rsp"))
 
 ;; use like (tls-aes-all-test::test192)
 
@@ -136,7 +135,7 @@
 
 (defun test-256cmac ()
   "tests the CMAC MODES for aes256"
-  (test-cmac256-rsp           "rsp/cmac/CMACGenAES256.rsp")
-  (test-cmac256-rsp-verify    "rsp/cmac/CMACVerAES256.rsp"))
+  (test-aes256-cmac-rsp           "rsp/cmac/CMACGenAES256.rsp")
+  (test-aes256-cmac-rsp-verify    "rsp/cmac/CMACVerAES256.rsp"))
 
 ;; use like (tls-aes-all-test::test256)

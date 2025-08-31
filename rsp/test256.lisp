@@ -302,7 +302,7 @@
 	    (progn
 	      (incf fail)
 	      (format t "~%❌ Encrypt Test ~D failed!!!!!!!!" (gethash "Count" case)))))))
-    (format t "~&~%🧾 AES256 GCM Encrypt -~&Summary: ~D passed, ~D failed~%" pass fail)))
+    (format t "~&~%✅🧾 AES256 GCM Encrypt -~&Summary: ~D passed, ~D failed~%" pass fail)))
 
 (defun test256-gcm-rsp-decrypt (filename &optional verbose-p)
   "Runs AES-GCM decryption tests from NIST RSP file."
@@ -351,7 +351,7 @@
 	    (progn
 	      (incf fail)
 	      (format t "~%❌ Decrypt Test ~D failed (tag verification error)" (gethash "Count" case)))))))
-    (format t "~%🧾 AES256 GCM Decrypt Summary: ~D passed, ~D failed~%" pass fail)))
+    (format t "~%✅🧾 AES256 GCM Decrypt Summary: ~D passed, ~D failed~%" pass fail)))
 
 (defun test-aes256-cmac-rsp (filename)
   (let ((cases (parse-aes256-cmac-rsp filename))
