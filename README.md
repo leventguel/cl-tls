@@ -17,3 +17,5 @@ PBKDF2 key derivation
 
 ## tls-user-auth
 User registration, credential storage, secure file handling
+
+All of this is non-finished yet!
