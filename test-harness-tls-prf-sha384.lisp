@@ -10,14 +10,14 @@
      (loop for b across byte-array
            do (format s "~2,'0X" b)))))
 
-(defun string-to-bytes (str)
+(defun string-to-array (str)
   (make-array (length str)
               :element-type '(unsigned-byte 8)
               :initial-contents (map 'list #'char-code str)))
 
 (defun run-test (label secret label-str seed-str output-len expected-hex)
-  (let* ((label-bytes (string-to-bytes label-str))
-         (seed-bytes  (string-to-bytes seed-str))
+  (let* ((label-bytes (string-to-array label-str))
+         (seed-bytes  (string-to-array seed-str))
          (actual-bytes (tls-prf-sha384 secret label-bytes seed-bytes output-len))
          (actual-hex   (bytes-to-hex actual-bytes)))
     (format t "~%~A~%Expected: ~A~%Actual:   ~A~%"

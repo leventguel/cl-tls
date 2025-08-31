@@ -1,32 +1,13 @@
 (defpackage :sha512
-  (:use :cl :tls-utils)
+  (:use :cl :shared-utils :sha-utils)
   (:export :sha512 :sha512-hex))
 
 (in-package :sha512)
 
-(defun rotr64 (x n)
-  (mod (logior (ash x (- n))
-               (ash x (- 64 n)))
-       #x10000000000000000))
-
-(defun shr64 (x n)
-  (mod (ash x (- n)) #x10000000000000000))
-
-(defun ch (x y z) (logxor (logand x y) (logand (lognot x) z)))
-
-(defun maj (x y z) (logxor (logand x y) (logand x z) (logand y z)))
-
-(defun sigma0-64 (x)
-  (logxor (rotr64 x 28) (rotr64 x 34) (rotr64 x 39)))
-
-(defun sigma1-64 (x)
-  (logxor (rotr64 x 14) (rotr64 x 18) (rotr64 x 41)))
-
-(defun gamma0-64 (x)
-  (logxor (rotr64 x 1) (rotr64 x 8) (shr64 x 7)))
-
-(defun gamma1-64 (x)
-  (logxor (rotr64 x 19) (rotr64 x 61) (shr64 x 6)))
+(defun sigma0-64 (x) (logxor (rotr64 x 28) (rotr64 x 34) (rotr64 x 39)))
+(defun sigma1-64 (x) (logxor (rotr64 x 14) (rotr64 x 18) (rotr64 x 41)))
+(defun gamma0-64 (x) (logxor (rotr64 x 1) (rotr64 x 8) (shr64 x 7)))
+(defun gamma1-64 (x) (logxor (rotr64 x 19) (rotr64 x 61) (shr64 x 6)))
 
 (defparameter +h0-512+
   #(#x6a09e667f3bcc908
@@ -143,7 +124,7 @@
     (dolist (block blocks)
       (let ((w (sha512-schedule block)))
         (setf h (sha512-compress w h))))
-    h)) ; returns vector of 8 64-bit words
+    h)) ; returns vector of 8 64-bit words (512bits)
 
 (defun sha512-hex (message)
   (let ((digest (sha512 message)))

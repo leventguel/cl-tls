@@ -1,45 +1,26 @@
 (defpackage :sha384
-  (:use :cl :tls-utils)
+  (:use :cl :shared-utils :sha-utils)
   (:export :sha384 :sha384-hex))
 
 (in-package :sha384)
 
-;; SHA-384 Initial Hash Values (from FIPS 180-4)
-(defun rotr64 (x n)
-  (mod (logior (ash x (- n))
-               (ash x (- 64 n)))
-       #x10000000000000000))
+(defun sigma0-64 (x) (logxor (rotr64 x 28) (rotr64 x 34) (rotr64 x 39)))
+(defun sigma1-64 (x) (logxor (rotr64 x 14) (rotr64 x 18) (rotr64 x 41)))
+(defun gamma0-64 (x) (logxor (rotr64 x 1) (rotr64 x 8) (shr64 x 7)))
+(defun gamma1-64 (x) (logxor (rotr64 x 19) (rotr64 x 61) (shr64 x 6)))
 
-(defun shr64 (x n)
-  (mod (ash x (- n)) #x10000000000000000))
+;; these are just copies of the original +h0-512+ constants just renamed (since we are truncating below anyway it's ok)
+(defparameter +h0-384+
+  #(#xcbbb9d5dc1059ed8
+    #x629a292a367cd507
+    #x9159015a3070dd17
+    #x152fecd8f70e5939
+    #x67332667ffc00b31
+    #x8eb44a8768581511
+    #xdb0c2e0d64f98fa7
+    #x47b5481dbefa4fa4))
 
-(defun ch (x y z) (logxor (logand x y) (logand (lognot x) z)))
-
-(defun maj (x y z) (logxor (logand x y) (logand x z) (logand y z)))
-
-(defun sigma0-64 (x)
-  (logxor (rotr64 x 28) (rotr64 x 34) (rotr64 x 39)))
-
-(defun sigma1-64 (x)
-  (logxor (rotr64 x 14) (rotr64 x 18) (rotr64 x 41)))
-
-(defun gamma0-64 (x)
-  (logxor (rotr64 x 1) (rotr64 x 8) (shr64 x 7)))
-
-(defun gamma1-64 (x)
-  (logxor (rotr64 x 19) (rotr64 x 61) (shr64 x 6)))
-
-(defparameter +h0-512+
-  #(#x6a09e667f3bcc908
-    #xbb67ae8584caa73b
-    #x3c6ef372fe94f82b
-    #xa54ff53a5f1d36f1
-    #x510e527fade682d1
-    #x9b05688c2b3e6c1f
-    #x1f83d9abfb41bd6b
-    #x5be0cd19137e2179))
-
-(defparameter +k-512+
+(defparameter +k-384+
   #(#x428a2f98d728ae22 #x7137449123ef65cd #xb5c0fbcfec4d3b2f #xe9b5dba58189dbbc
     #x3956c25bf348b538 #x59f111f1b605d019 #x923f82a4af194f9b #xab1c5ed5da6d8118
     #xd807aa98a3030242 #x12835b0145706fbe #x243185be4ee4b28c #x550c7dc3d5ffb4e2
@@ -61,17 +42,7 @@
     #x28db77f523047d84 #x32caab7b40c72493 #x3c9ebe0a15c9bebc #x431d67c49c100d4c
     #x4cc5d4becb3e42b6 #x597f299cfc657e2a #x5fcb6fab3ad6faec #x6c44198c4a475817))
 
-(defparameter +h0-384+
-  #(#xcbbb9d5dc1059ed8
-    #x629a292a367cd507
-    #x9159015a3070dd17
-    #x152fecd8f70e5939
-    #x67332667ffc00b31
-    #x8eb44a8768581511
-    #xdb0c2e0d64f98fa7
-    #x47b5481dbefa4fa4))
-
-(defun sha512-pad (message)
+(defun sha384-pad (message)
   (let* ((ml (* (length message) 8)) ; message length in bits
          (padlen (mod (- 896 (mod (+ ml 8) 1024)) 1024)) ; bits of zero-padding
          (total (+ ml 8 padlen 128)) ; total bits after padding
@@ -93,7 +64,7 @@
     (loop for i from 0 below bytes by 128
           collect (subseq padded i (+ i 128)))))
 
-(defun sha512-schedule (block)
+(defun sha384-schedule (block)
   (let ((w (make-array 80 :element-type '(unsigned-byte 64))))
     ;; First 16 words from the block
     (loop for i from 0 below 16
@@ -117,14 +88,14 @@
                         #x10000000000000000)))
     w))
 
-(defun sha512-compress (w h)
+(defun sha384-compress (w h)
   (let ((a (aref h 0)) (b (aref h 1)) (c (aref h 2)) (d (aref h 3))
         (e (aref h 4)) (f (aref h 5)) (g (aref h 6)) (h0 (aref h 7)))
     (loop for i from 0 below 80
           for t1 = (mod (+ h0
                            (sigma1-64 e)
                            (ch e f g)
-                           (aref +k-512+ i)
+                           (aref +k-384+ i)
                            (aref w i))
                         #x10000000000000000)
           for t2 = (mod (+ (sigma0-64 a)
@@ -141,38 +112,21 @@
                      b a
                      a new-a)))
     ;; Compute new hash state
-    (let ((new-h (make-array 8 :element-type '(unsigned-byte 64))))
+    (let ((new-h (make-array 8 :element-type '(unsigned-byte 64)))) ;; we can't use 32 here since 384 > 256
       (loop for i from 0 below 8
             for val in (list a b c d e f g h0)
             do (setf (aref new-h i)
                      (mod (+ (aref h i) val) #x10000000000000000)))
       new-h)))
 
-(defun sha512 (message)
-  (let ((blocks (sha512-pad message))
-        (h (copy-seq +h0-512+)))
-    (dolist (block blocks)
-      (let ((w (sha512-schedule block)))
-        (setf h (sha512-compress w h))))
-    h)) ; returns vector of 8 64-bit words
-
-(defun sha512-hex (message)
-  (let ((digest (sha512 message)))
-    (string-downcase
-     (with-output-to-string (s)
-       (loop for word across digest
-             do (loop for shift from 56 downto 0 by 8
-                      do (format s "~2,'0X" (ldb (byte 8 shift) word))))))))
-
-
 ;; SHA-384 Core Function
 (defun sha384 (message)
-  (let ((blocks (sha512-pad message))
+  (let ((blocks (sha384-pad message))
         (h (copy-seq +h0-384+)))
     (dolist (block blocks)
-      (let ((w (sha512-schedule block)))
-        (setf h (sha512-compress w h))))
-    ;; Return only the first 6 words (384 bits)
+      (let ((w (sha384-schedule block)))
+        (setf h (sha384-compress w h))))
+    ;; Return only the first 6 words (384 bits) (from 8*64 = 512)
     (subseq h 0 6)))
 
 ;; SHA-384 Hex Output

@@ -1,33 +1,19 @@
 (defpackage :sha224
-  (:use :cl :tls-utils)
+  (:use :cl :shared-utils :sha-utils)
   (:export :sha224 :sha224-hex))
 
 (in-package :sha224)
 
-(defun rotr32 (x n)
-  (mod (logior (ash x (- n))
-               (ash x (- 32 n)))
-       #x100000000))
-
-(defun shr32 (x n)
-  (mod (ash x (- n)) #x100000000))
-
-(defun ch (x y z) (logxor (logand x y) (logand (lognot x) z)))
-(defun maj (x y z) (logxor (logand x y) (logand x z) (logand y z)))
 (defun sigma0 (x) (logxor (rotr32 x 2) (rotr32 x 13) (rotr32 x 22)))
 (defun sigma1 (x) (logxor (rotr32 x 6) (rotr32 x 11) (rotr32 x 25)))
 (defun gamma0 (x) (logxor (rotr32 x 7) (rotr32 x 18) (shr32 x 3)))
 (defun gamma1 (x) (logxor (rotr32 x 17) (rotr32 x 19) (shr32 x 10)))
 
-(defparameter +h0+
-  #( #x6a09e667 #xbb67ae85 #x3c6ef372 #xa54ff53a
-     #x510e527f #x9b05688c #x1f83d9ab #x5be0cd19 ))
-
 (defparameter +h0-224+
   #( #xc1059ed8 #x367cd507 #x3070dd17 #xf70e5939
      #xffc00b31 #x68581511 #x64f98fa7 #xbefa4fa4 ))
 
-(defparameter +k+
+(defparameter +k-224+
   #( #x428a2f98 #x71374491 #xb5c0fbcf #xe9b5dba5 #x3956c25b #x59f111f1 #x923f82a4 #xab1c5ed5
      #xd807aa98 #x12835b01 #x243185be #x550c7dc3 #x72be5d74 #x80deb1fe #x9bdc06a7 #xc19bf174
      #xe49b69c1 #xefbe4786 #x0fc19dc6 #x240ca1cc #x2de92c6f #x4a7484aa #x5cb0a9dc #x76f988da
@@ -37,28 +23,23 @@
      #x19a4c116 #x1e376c08 #x2748774c #x34b0bcb5 #x391c0cb3 #x4ed8aa4a #x5b9cca4f #x682e6ff3
      #x748f82ee #x78a5636f #x84c87814 #x8cc70208 #x90befffa #xa4506ceb #xbef9a3f7 #xc67178f2 ))
 
-(defun sha256-pad (message)
-  (let* ((ml (* (length message) 8)) ; message length in bits
-         (padlen (mod (- 448 (mod (+ ml 8) 512)) 512)) ; bits of zero-padding
-         (total (+ ml 8 padlen 64)) ; total bits
+(defun sha224-pad (message)
+  (let* ((ml (* (length message) 8))
+         (padlen (mod (- 448 (mod (+ ml 8) 512)) 512))
+         (total (+ ml 8 padlen 64))
          (bytes (/ total 8))
          (padded (make-array bytes :element-type '(unsigned-byte 8) :initial-element 0)))
-    ;; Copy original message
     (replace padded message)
-    ;; Append 0x80 (10000000)
     (setf (aref padded (length message)) #x80)
-    ;; Append 64-bit big-endian length
-		(loop for i from 0 below 8
-      for shift = (* 8 (- 7 i))
-      do (setf (aref padded (+ (- bytes 8) i))
-               (ldb (byte 8 shift) ml)))    
-    ;; Return list of 64-byte blocks
+    (loop for i from 0 below 8
+          for shift = (* 8 (- 7 i))
+          do (setf (aref padded (+ (- bytes 8) i))
+                   (ldb (byte 8 shift) ml)))
     (loop for i from 0 below bytes by 64
           collect (subseq padded i (+ i 64)))))
 
-(defun sha256-schedule (block)
+(defun sha224-schedule (block)
   (let ((w (make-array 64 :element-type '(unsigned-byte 32))))
-    ;; W[0..15] from block (big-endian)
     (loop for i from 0 below 16
           for j = (* i 4)
           for a = (aref block j)
@@ -71,7 +52,6 @@
                                         (ash c 8))
                                 d)
                         #x100000000)))
-    ;; W[16..63] expansion
     (loop for i from 16 below 64
           do (setf (aref w i)
                    (mod (+ (gamma1 (aref w (- i 2)))
@@ -81,11 +61,11 @@
                         #x100000000)))
     w))
 
-(defun sha256-compress (w h)
+(defun sha224-compress (w h)
   (let ((a (aref h 0)) (b (aref h 1)) (c (aref h 2)) (d (aref h 3))
         (e (aref h 4)) (f (aref h 5)) (g (aref h 6)) (h0 (aref h 7)))
     (loop for i from 0 below 64
-          for t1 = (mod (+ h0 (sigma1 e) (ch e f g) (aref +k+ i) (aref w i)) #x100000000)
+          for t1 = (mod (+ h0 (sigma1 e) (ch e f g) (aref +k-224+ i) (aref w i)) #x100000000)
           for t2 = (mod (+ (sigma0 a) (maj a b c)) #x100000000)
           do (let ((new-a (mod (+ t1 t2) #x100000000))
                    (new-e (mod (+ d t1) #x100000000)))
@@ -97,36 +77,21 @@
                      c b
                      b a
                      a new-a)))
-    (let ((new-h (make-array 8 :element-type '(unsigned-byte 32))))
+    (let ((new-h (make-array 8 :element-type '(unsigned-byte 32)))) ;; we can use 32 here since 224 < 256
       (loop for i from 0 below 8
             for val in (list a b c d e f g h0)
             do (setf (aref new-h i)
                      (mod (+ (aref h i) val) #x100000000)))
       new-h)))
 
-(defun sha256 (message)
-  (let ((blocks (sha256-pad message))
-        (h (copy-seq +h0+)))
-    (dolist (block blocks)
-      (let ((w (sha256-schedule block)))
-        (setf h (sha256-compress w h))))
-    h))
-
 (defun sha224 (message)
-  (let ((blocks (sha256-pad message))
+  (let ((blocks (sha224-pad message))
         (h (copy-seq +h0-224+)))
     (dolist (block blocks)
-      (let ((w (sha256-schedule block)))
-        (setf h (sha256-compress w h))))
-    ;; Return only the first 7 words
+      (let ((w (sha224-schedule block)))
+        (setf h (sha224-compress w h))))
+    ;; Return only the first 7 words (224 bits) (from 8*32 = 256)
     (subseq h 0 7)))
-
-(defun sha256-hex (message)
-  (let ((digest (sha256 message)))
-    (string-downcase (with-output-to-string (s)
-      (loop for word across digest
-            do (loop for shift from 24 downto 0 by 8
-                     do (format s "~2,'0X" (ldb (byte 8 shift) word))))))))
 
 (defun sha224-hex (message)
   (let ((digest (sha224 message)))
@@ -135,3 +100,5 @@
        (loop for word across digest
              do (loop for shift from 24 downto 0 by 8
                       do (format s "~2,'0X" (ldb (byte 8 shift) word))))))))
+
+(format t "~a~%" (sha224-hex (map 'vector #'char-code "abc")))

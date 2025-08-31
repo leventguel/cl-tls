@@ -1,0 +1,5 @@
+(load "test-harness-sha1.lisp")
+(load "test-harness-sha224.lisp")
+(load "test-harness-sha256.lisp")
+(load "test-harness-sha384.lisp")
+(load "test-harness-sha512.lisp")

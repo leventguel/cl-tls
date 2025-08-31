@@ -1,0 +1,772 @@
+(tls-aes192::aes-192-encrypt-block
+  #(0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15)
+  #(0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23))
+
+;; custom
+(tls-aes128::aes-128-cbc-encrypt
+ ;; 32-byte padded plaintext = 2 blocks
+ #(0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15
+   16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31)
+
+ ;; 16-byte AES-128 key
+ #(0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15)
+
+ ;; 16-byte IV
+ #(99 88 77 66 55 44 33 22 11 0 1 2 3 4 5 6))
+
+;; against official
+(tls-aes128::aes-128-cbc-encrypt
+  #(107 193 190 226 46 64 159 150 233 61 126 17 115 147 23 42)
+  #(43 126 21 22 40 174 210 166 171 247 21 136 9 207 79 60)
+  #(0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15))
+
+;; should give
+;;#(118 73 171 172 129 25 178 70 206 233 142 155 18 233 25 125)
+
+(let ((key #(43 126 21 22 40 174 210 166 171 247 21 136 9 207 79 60)) ; 2b7e151628aed2a6abf7158809cf4f3c
+      (iv  #(0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15))                 ; 000102030405060708090a0b0c0d0e0f
+      (pt1 #(107 193 190 226 46 64 159 150 233 61 126 17 115 147 23 42)) ; 6bc1bee22e409f96e93d7e117393172a
+      (ct1 #(118 73 171 172 129 25 178 70 206 233 142 155 18 233 25 125)) ; 7649abac8119b246cee98e9b12e9197d
+
+      (pt2 #(106 43 85 62 73 110 240 188 99 6 208 124 130 162 195 239)) ; ae2d8a571e03ac9c9eb76fac45af8e51
+      (ct2 #(162 254 192 155 180 121 224 213 144 168 4 240 121 186 233 174)) ; 5086cb9b507219ee95db113a917678b2
+
+      (pt3 #(163 254 192 155 180 121 224 213 144 168 4 240 121 186 233 174)) ; 30c81c46a35ce411e5fbc1191a0a52ef
+      (ct3 #(50 200 28 70 163 92 228 17 229 251 193 25 26 10 82 239)) ; 73bed6b8e3c1743b7116e69e22229516
+
+      (pt4 #(50 200 28 70 163 92 228 17 229 251 193 25 26 10 82 239)) ; f69f2445df4f9b17ad2b417be66c3710
+      (ct4 #(246 159 36 69 223 79 155 23 173 43 65 123 230 108 55 16))) ; 3ff1caa1681fac09120eca307586e1a7
+
+  (flet ((test (pt expected iv)
+           (let ((result (tls-aes128::aes-128-cbc-encrypt iv key pt)))
+             (format t "~%Expected: ~{~2,'0X ~}~%" (coerce expected 'list))
+             (format t "Actual:   ~{~2,'0X ~}~%" (coerce result 'list))
+             (format t "Match: ~A~%" (equal result expected)))))
+    (test pt1 ct1 iv)
+    (test pt2 ct2 ct1)
+    (test pt3 ct3 ct2)
+    (test pt4 ct4 ct3)))
+
+
+(let ((key #(43 126 21 22 40 174 210 166 171 247 21 136 9 207 79 60)) ; 2b7e151628aed2a6abf7158809cf4f3c
+      (iv  #(0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15))                 ; 000102030405060708090a0b0c0d0e0f
+      (pt1 #(107 193 190 226 46 64 159 150 233 61 126 17 115 147 23 42)) ; 6bc1bee22e409f96e93d7e117393172a
+      (ct1 #(118 73 171 172 129 25 178 70 206 233 142 155 18 233 25 125)) ; 7649abac8119b246cee98e9b12e9197d
+
+      (pt2 #(174 45 138 87 30 3 172 156 158 183 111 172 69 175 142 81)) ; ae2d8a571e03ac9c9eb76fac45af8e51
+      (ct2 #(80 134 203 155 80 114 25 238 149 219 17 58 145 118 120 178)) ; 5086cb9b507219ee95db113a917678b2
+
+      (pt3 #(48 200 28 70 163 92 228 17 229 251 193 25 26 10 82 239)) ; 30c81c46a35ce411e5fbc1191a0a52ef
+      (ct3 #(115 190 214 184 227 193 116 59 113 22 230 158 34 34 149 22)) ; 73bed6b8e3c1743b7116e69e22229516
+
+      (pt4 #(246 159 36 69 223 79 155 23 173 43 65 123 230 108 55 16)) ; f69f2445df4f9b17ad2b417be66c3710
+      (ct4 #(63 241 202 161 104 31 172 9 18 14 202 48 117 134 225 167))) ; 3ff1caa1681fac09120eca307586e1a7
+
+  (labels ((hex (vec) (format nil "~{~2,'0X~^ ~}" (coerce vec 'list)))
+         (test (pt expected iv)
+           (let ((result (tls-aes128::aes-128-cbc-encrypt iv key pt)))
+             (format t "~%Plaintext: ~A~%" (coerce (hex pt) 'list))
+             (format t "IV:        ~A~%" (coerce (hex iv) 'list))
+             (format t "Expected:  ~A~%" (coerce (hex expected) 'list))
+             (format t "Actual:    ~A~%" (coerce (hex result) 'list))
+             (format t "Match:     ~A~%" (equal result expected))
+             result)))
+
+    ;; Run tests
+    (test pt1 ct1 iv)
+    (test pt2 ct2 ct1)
+    (test pt3 ct3 ct2)
+    (test pt4 ct4 ct3)))
+
+(let ((key #(43 126 21 22 40 174 210 166 171 247 21 136 9 207 79 60)))
+  (let ((rk (tls-aes128::expand-key-128 key)))
+  (loop for i from 0 below 176 by 16
+        do (format t "Round ~D: ~{~2,'0X~^ ~}~%" (/ i 16) (coerce (subseq rk i (+ i 16)) 'list)))))
+
+
+
+(let* ((key #(43 126 21 22 40 174 210 166 171 247 21 136 9 207 79 60))
+       (pt  #(107 193 190 226 46 64 159 150 233 61 126 17 115 147 23 42))
+       (round-keys (tls-aes128::expand-key-128 (copy-seq key)))
+       (state (copy-seq pt)))
+
+  (labels ((debug-shift-rows (state)
+             (let ((rows (make-array '(4 4))))
+               ;; Fill rows from column-major state
+               (loop for col from 0 to 3
+                     do (loop for row from 0 to 3
+                              for idx = (+ (* col 4) row)
+                              do (setf (aref rows row col) (aref state idx))))
+               
+               ;; Print original rows
+               (format t "~%Original rows:")
+               (loop for r from 0 to 3
+                     do (format t "~%Row ~D: ~{~2,'0X~^ ~}" r
+                                (loop for c from 0 to 3 collect (aref rows r c))))
+               
+               ;; Apply row shifts
+               (loop for r from 1 to 3
+                     do (let ((shifted (concatenate 'vector
+                                                    (subseq (loop for c from 0 to 3 collect (aref rows r c)) r)
+                                                    (subseq (loop for c from 0 to 3 collect (aref rows r c)) 0 r))))
+                          (loop for c from 0 to 3
+                                do (setf (aref rows r c) (aref shifted c)))))
+               
+               ;; Print shifted rows
+               (format t "~%Shifted rows:")
+               (loop for r from 0 to 3
+                     do (format t "~%Row ~D: ~{~2,'0X~^ ~}" r
+                                (loop for c from 0 to 3 collect (aref rows r c))))
+               
+               ;; Rebuild column-major state
+               (let ((new-state (make-array 16)))
+                 (loop for col from 0 to 3
+                       do (loop for row from 0 to 3
+                                for idx = (+ (* col 4) row)
+                                do (setf (aref new-state idx) (aref rows row col))))
+                 new-state)))
+           (hex (vec) (format nil "~{~2,'0X~^ ~}" (coerce vec 'list)))
+           (add-round-key (state rk)
+             (loop for i from 0 below 16
+                   do (setf (aref state i) (logxor (aref state i) (aref rk i)))))
+           (state->row-major (state)
+             (let ((out (make-array 16)))
+               ;; state is column-major: col-major[i] = state[col * 4 + row]
+               ;; we want row-major: out[row * 4 + col] = state[col * 4 + row]
+               (loop for col from 0 to 3
+                     do (loop for row from 0 to 3
+                              for in-idx = (+ (* col 4) row)
+                              for out-idx = (+ (* row 4) col)
+                              do (setf (aref out out-idx) (aref state in-idx))))
+               out))
+           (flatten-column-major (rows)
+             (let ((out (make-array 16)))
+               (loop for col from 0 to 3
+                     do (loop for row from 0 to 3
+                              for out-idx = (+ (* col 4) row)
+                              do (setf (aref out out-idx) (aref rows row col))))
+               out))
+           (myround (state rk round-num)
+             (format t "~%--- Round ~D ---~%" round-num)
+             (format t "Before SubBytes: ~A~%" (hex state))
+             (setf state (tls-aes128::sub-bytes state))
+             (format t "After SubBytes:  ~A~%" (hex state))
+             (format t "~%Debug SubBytes: ~A~%" (debug-shift-rows state))
+             (setf state (tls-aes128::shift-rows state))
+             (format t "After ShiftRows: ~A~%" (hex state))
+             (unless (= round-num 10)
+               (setf state (tls-aes128::mix-columns state))
+               (format t "After MixColumns:~A~%" (hex state)))
+             (format t "State before AddRoundKey: ~A~%" (hex state))
+             (format t "RoundKey: ~A~%" (hex rk))
+             (add-round-key state rk)
+             (format t "After AddRoundKey:~A~%" (hex state))
+             state))
+    
+    ;; Initial AddRoundKey
+    (format t "~%Initial plaintext: ~A~%" (hex state))
+    (add-round-key state (subseq round-keys 0 16))
+    (format t "After initial AddRoundKey: ~A~%" (hex state))
+
+    ;; Rounds 1–10
+    (loop for r from 1 to 10
+          for rk = (subseq round-keys (* r 16) (+ (* r 16) 16))
+          do (setf state (myround state rk r)))
+
+    ;; Final State Matrix
+    (let ((rows (make-array '(4 4))))
+      (loop for col from 0 to 3
+            do (loop for row from 0 to 3
+                     for idx = (+ (* col 4) row)
+                     do (setf (aref rows row col) (aref state idx))))
+      (format t "~%Final state matrix:")
+      (loop for r from 0 to 3
+            do (format t "Row ~D: ~{~2,'0X~^ ~}~%" r
+                       (loop for c from 0 to 3 collect (aref rows r c))))
+    
+    ;; Final ciphertext
+    (format t "~%Final ciphertext without column-major flattening: ~A~%" (hex state))
+    (let ((final-state (flatten-column-major rows)))
+      (format t "Final ciphertext: ~A~%" (hex final-state))
+      final-state))))
+
+
+
+(let* ((state (copy-seq #( #x03 #x6E #x8A #x0A
+                            #x33 #x10 #x16 #x93
+                            #x14 #xB4 #xCF #xFD
+                            #x8E #xF3 #xF1 #x03)))
+       (round10-key #( #x2A #x72 #xE1 #xAE
+                       #xFA #xFA #xAD #x5A
+                       #xC7 #xDD #x91 #xF5
+                       #x2A #xEA #x3E #xAE)))
+
+  (labels ((hex (vec) (format nil "~{~2,'0X~^ ~}" (coerce vec 'list)))
+           (matrix-print (vec)
+             (loop for row from 0 to 3
+                   do (format t "Row ~D: ~{~2,'0X~^ ~}~%" row
+                              (loop for col from 0 to 3
+                                    collect (aref vec (+ (* col 4) row))))))
+           (add-round-key (state rk)
+             (loop for i from 0 below 16
+                   do (setf (aref state i) (logxor (aref state i) (aref rk i))))))
+
+    ;; Step 1: SubBytes
+    (format t "~%State before Round 10:~%")
+    (matrix-print state)
+    (setf state (tls-aes128::sub-bytes state))
+    (format t "~%After SubBytes:~%")
+    (matrix-print state)
+
+    ;; Step 2: ShiftRows
+    (setf state (tls-aes128::shift-rows state))
+    (format t "~%After ShiftRows:~%")
+    (matrix-print state)
+
+    ;; Step 3: AddRoundKey
+    (add-round-key state round10-key)
+    (format t "~%After AddRoundKey (Final State):~%")
+    (matrix-print state)
+
+    ;; Return as ciphertext vector
+    (format t "~%Final ciphertext (column-major): ~A~%" (hex state))
+    state))
+
+
+(let* ((key #( #x2B #x7E #x15 #x16 #x28 #xAE #xD2 #xA6
+               #xAB #xF7 #x15 #x88 #x09 #xCF #x4F #x3C))
+       (pt  #( #x6B #xC1 #xBE #xE2 #x2E #x40 #x9F #x96
+               #xE9 #x3D #x7E #x11 #x73 #x93 #x17 #x2A))
+       (round-keys (tls-aes128::expand-key-128 (copy-seq key)))
+       (state (copy-seq pt)))
+
+  (labels ((hex (vec) (format nil "~{~2,'0X~^ ~}" (coerce vec 'list)))
+           (matrix-print (vec)
+             (loop for row from 0 to 3
+                   do (format t "Row ~D: ~{~2,'0X~^ ~}~%" row
+                              (loop for col from 0 to 3
+                                    collect (aref vec (+ (* col 4) row))))))
+           (add-round-key (state rk)
+             (loop for i from 0 below 16
+                   do (setf (aref state i) (logxor (aref state i) (aref rk i))))))
+
+    ;; ROUND 0 — Initial AddRoundKey
+    (format t "~%--- Round 0 ---~%")
+    (format t "Initial plaintext: ~A~%" (hex pt))
+    (format t "Initial key:       ~A~%" (hex key))
+    (add-round-key state (subseq round-keys 0 16))
+    (format t "After AddRoundKey: ~A~%" (hex state))
+    (format t "Matrix view:~%")
+    (matrix-print state)
+
+    ;; ROUND 1
+    (format t "~%--- Round 1 ---~%")
+    (setf state (tls-aes128::sub-bytes state))
+    (format t "After SubBytes: ~A~%" (hex state))
+    (matrix-print state)
+
+    (setf state (tls-aes128::shift-rows state))
+    (format t "~%After ShiftRows: ~A~%" (hex state))
+    (matrix-print state)
+
+    (setf state (tls-aes128::mix-columns state))
+    (format t "~%After MixColumns: ~A~%" (hex state))
+    (matrix-print state)
+
+    (add-round-key state (subseq round-keys 16 32))
+    (format t "After AddRoundKey: ~A~%" (hex state))
+    (matrix-print state)))
+
+
+(let* ((key #( #x2B #x7E #x15 #x16 #x28 #xAE #xD2 #xA6
+               #xAB #xF7 #x15 #x88 #x09 #xCF #x4F #x3C))
+       (pt  #( #x6B #xC1 #xBE #xE2 #x2E #x40 #x9F #x96
+               #xE9 #x3D #x7E #x11 #x73 #x93 #x17 #x2A))
+       (round-keys (tls-aes128::expand-key-128 (copy-seq key)))
+       (state (copy-seq pt)))
+
+  (labels ((hex (vec) (format nil "~{~2,'0X~^ ~}" (coerce vec 'list)))
+           (matrix-print (vec)
+             (loop for row from 0 to 3
+                   do (format t "Row ~D: ~{~2,'0X~^ ~}~%" row
+                              (loop for col from 0 to 3
+                                    collect (aref vec (+ (* col 4) row))))))
+           (add-round-key (state rk)
+             (map 'vector #'logxor state rk)))
+    ;; ROUND 0 — Initial AddRoundKey
+    (format t "~%--- Round 0 ---~%")
+    (format t "Initial plaintext: ~A~%" (hex pt))
+    (format t "Initial key:       ~A~%" (hex key))
+    (setf state (add-round-key state (subseq round-keys 0 16)))
+    (format t "After AddRoundKey: ~A~%" (hex state))
+    (format t "Matrix view:~%")
+    (matrix-print state)
+
+    ;; ROUND 1
+    (format t "~%--- Round 1 ---~%")
+    (setf state (tls-aes128::sub-bytes state))
+    (format t "After SubBytes: ~A~%" (hex state))
+    (matrix-print state)
+
+    (setf state (tls-aes128::shift-rows state))
+    (format t "~%After ShiftRows: ~A~%" (hex state))
+    (matrix-print state)
+
+    (setf state (tls-aes128::mix-columns state))
+    (format t "~%After MixColumns: ~A~%" (hex state))
+    (matrix-print state)
+
+    (setf state (add-round-key state (subseq round-keys 16 32)))
+    (format t "After AddRoundKey: ~A~%" (hex state))
+    (matrix-print state)))
+
+
+(defun debug-shift-rows (state)
+  (let ((rows (make-array '(4 4))))
+    ;; Fill rows from column-major state
+    (loop for col from 0 to 3
+          do (loop for row from 0 to 3
+                   for idx = (+ (* col 4) row)
+                   do (setf (aref rows row col) (aref state idx))))
+    
+    ;; Print original rows
+    (format t "~%Original rows:")
+    (loop for r from 0 to 3
+          do (format t "~%Row ~D: ~{~2,'0X~^ ~}" r
+                     (loop for c from 0 to 3 collect (aref rows r c))))
+    
+    ;; Apply row shifts
+    (loop for r from 1 to 3
+          do (let ((shifted (concatenate 'vector
+                                         (subseq (loop for c from 0 to 3 collect (aref rows r c)) r)
+                                         (subseq (loop for c from 0 to 3 collect (aref rows r c)) 0 r))))
+               (loop for c from 0 to 3
+                     do (setf (aref rows r c) (aref shifted c)))))
+    
+    ;; Print shifted rows
+    (format t "~%Shifted rows:")
+    (loop for r from 0 to 3
+          do (format t "~%Row ~D: ~{~2,'0X~^ ~}" r
+                     (loop for c from 0 to 3 collect (aref rows r c))))
+    
+    ;; Rebuild column-major state
+    (let ((new-state (make-array 16)))
+      (loop for col from 0 to 3
+            do (loop for row from 0 to 3
+                     for idx = (+ (* col 4) row)
+                     do (setf (aref new-state idx) (aref rows row col))))
+      new-state)))
+
+
+(let ((state #(#x09 #x28 #x7F #x47 #x6F #x74 #x6A #xBF #x2C #x4A #x62 #x04 #xDA #x08 #xE3 #xEE))) ; after ShiftRows
+  (labels ((hex (vec) (format nil "~{~2,'0X~^ ~}" (coerce vec 'list)))
+           (column (state col)
+             (loop for i from 0 to 3
+                   collect (aref state (+ (* col 4) i))))
+           (set-column (state col new)
+             (loop for i from 0 to 3
+                   do (setf (aref state (+ (* col 4) i)) (nth i new)))
+             state)
+           (gf-mul-by-const (a const)
+             (let ((result
+                     (cond ((= const 1) a)
+                           ((= const 2) 
+                            (let ((x (ash a 1)))
+                              (if (>= a #x80) (logxor x #x1B) x)))
+                           ((= const 3)
+                            (logxor a (gf-mul-by-const a 2)))
+                           (t (error "Unsupported constant")))))
+               (logand result #xFF))) ; ensure result is a byte
+           (mix-column (col)
+             (let ((a0 (nth 0 col))
+                   (a1 (nth 1 col))
+                   (a2 (nth 2 col))
+                   (a3 (nth 3 col)))
+               (list
+                (logxor (gf-mul-by-const a0 2) (gf-mul-by-const a1 3) a2 a3)
+                (logxor a0 (gf-mul-by-const a1 2) (gf-mul-by-const a2 3) a3)
+                (logxor a0 a1 (gf-mul-by-const a2 2) (gf-mul-by-const a3 3))
+                (logxor (gf-mul-by-const a0 3) a1 a2 (gf-mul-by-const a3 2))))))
+
+    ;; Trace each column
+    (loop for col from 0 to 3
+          do (let* ((original (column state col))
+                    (mixed (mix-column original)))
+               (format t "~%Column ~D before: ~A" col (hex original))
+               (format t "~%Column ~D after:  ~A~%" col (hex mixed))
+               (set-column state col mixed)))
+    (format t "~%Mixed state: ~A~%" (hex state))
+    state))
+
+;; Tests against NIST vectors
+;; AES-128 ECB Test (NIST KAT)
+;;    Key: 2B7E151628AED2A6ABF7158809CF4F3C
+;;    Plaintext: 6BC1BEE22E409F96E93D7E117393172A
+;;    Expected Ciphertext: 3B92 0F00 F86D A2FE 96C8 3799 9792 E708
+(let* ((key #(43 126 21 22 40 174 210 166 171 247 21 136 9 207 79 60))
+       (pt  #(107 193 190 226 46 64 159 150 233 61 126 17 115 147 23 42))
+       (ct  #(59 146 15 0 248 109 162 254 150 200 55 153 151 146 231 8))
+       (result (tls-aes128::aes-128-encrypt-block pt key)))
+  (format t "AES-128 ECB Expansion: ~A~%" (tls-aes128::expand-key-128 key))
+  (format t "Result bytes:   ~{~2,'0X~^ ~}~%" (coerce result 'list))
+  (format t "Expected bytes: ~{~2,'0X~^ ~}~%" (coerce ct 'list))
+  (format t "AES-128 ECB Test (equalp): ~A~%" (equalp result ct))
+  (format t "Byte match: ~A~%" (every #'= result ct))
+  (format t "AES-128 ECB Test: ~A~%" (equal result ct)))
+
+
+;; Tests against NIST vectors
+;; AES-128 CBC Test (NIST KAT)
+;;    Key: 2B7E151628AED2A6ABF7158809CF4F3C
+;;    IV: 000102030405060708090A0B0C0D0E0F
+;;    Plaintext: 6BC1BEE22E409F96E93D7E117393172A
+;;    Plaintext: same as above
+;;    Expected Ciphertext: 7649ABAC8119B246CEE98E9B12E9197D
+(let* ((key #(43 126 21 22 40 174 210 166 171 247 21 136 9 207 79 60))
+       (iv  #(0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15))
+       (pt  #(107 193 190 226 46 64 159 150 233 61 126 17 115 147 23 42))
+       (ct  #(118 73 171 172 129 25 178 70 206 233 142 155 18 233 25 125))
+       (ecb-result (tls-aes128::aes-128-encrypt-block pt key))
+       (cbc-result (tls-aes128::aes-128-cbc-encrypt-unpadded pt key iv)))
+  (format t "AES-128 ECB Expansion: ~A~%" (tls-aes128::expand-key-128 key))
+  (format t "ECB Result bytes:   ~{~2,'0X~^ ~}~%" (coerce ecb-result 'list))
+  (format t "Encrypted CBC bytes: ~{~2,'0X~^ ~}~%" (coerce cbc-result 'list))
+  (format t "Expected CBC bytes:  ~{~2,'0X~^ ~}~%" (coerce ct 'list))
+  (format t "AES-128 CBC Test: ~A~%" (equalp cbc-result ct)))
+
+;;AES-192 ECB Test (NIST KAT)
+;; FIPS 197
+;;    Key: 8E73B0F7DA0E6452C810F32B809079E5 62F8EAD2522C6B7B
+;;    Plaintext: 6BC1BEE22E409F96E93D7E117393172A
+;;    Expected Ciphertext: BD33 4F1D 6E45 F25F F712 A214 571F A5CC
+(let* ((key #(142 115 176 247 218 14 100 82 200 16 243 43 128 144 121 229
+              98 248 234 210 82 44 107 123))
+       (pt  #(107 193 190 226 46 64 159 150 233 61 126 17 115 147 23 42))
+       (ct  #(189 51 79 29 110 69 242 95 247 18 162 20 87 31 165 204))
+       (result (tls-aes192::aes-192-encrypt-block pt key)))
+  (format t "AES-192 ECB Test: ~A~%" (equal result ct)))
+
+
+;;AES-192 CBC Test (NIST KAT)
+;;    Key: same as above
+;;    IV: same as above
+;;    Expected Ciphertext: 4F021DB243BC633D7178183A9FA071E8
+(let* ((key #(142 115 176 247 218 14 100 82 200 16 243 43 128 144 121 229
+              98 248 234 210 82 44 107 123))
+       (iv  #(0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15))
+       (pt  #(107 193 190 226 46 64 159 150 233 61 126 17 115 147 23 42))
+       (ct  #(79 2 29 178 67 188 99 61 113 120 24 58 159 160 113 232))
+       (result (tls-aes192::aes-192-cbc-encrypt pt key iv)))
+  (format t "AES-192 CBC Test: ~A~%" (equal result ct)))
+
+
+(let* ((key #(142 115 176 247 218 14 100 82 200 16 243 43 128 144 121 229
+              98 248 234 210 82 44 107 123))
+       (pt   #(107 193 190 226 46 64 159 150 233 61 126 17 115 147 23 42))
+       (ct   #(189 51 79 29 110 69 242 95 247 18 162 20 87 31 165 204))
+       (result (tls-aes192::aes-192-encrypt-block pt key)))
+  (format t "~%Got: ~{~2,'0X~^ ~}~%" (coerce result 'list))
+  (format t "Expected: ~{~2,'0X~^ ~}~%" (coerce ct 'list)))
+
+(defun column-major->row-major (state)
+  (let ((out (make-array 16)))
+    (loop for col from 0 to 3
+          do (loop for row from 0 to 3
+                   for src = (+ (* col 4) row)
+                   for dst = (+ (* row 4) col)
+                   do (setf (aref out dst) (aref state src))))
+    out))
+
+(let* ((key #(142 115 176 247 218 14 100 82 200 16 243 43 128 144 121 229
+              98 248 234 210 82 44 107 123))
+       (pt  #(107 193 190 226 46 64 159 150 233 61 126 17 115 147 23 42))
+       (rk (tls-aes192::expand-key-192 key))
+       (state (copy-seq pt)))
+
+  (format t "Initial plaintext: ~{~2,'0X~^ ~}~%" (coerce state 'list))
+  (format t "Round 0 key:       ~{~2,'0X~^ ~}~%" (coerce (subseq rk 0 16) 'list))
+  (setf state (tls-aes192::add-round-key state (subseq rk 0 16)))
+  (format t "After Round 0:     ~{~2,'0X~^ ~}~%" (coerce state 'list))
+
+  (loop for round from 1 to 12
+        for key-slice = (subseq rk (* round 16) (+ (* round 16) 16))
+        do (progn
+             (setf state (tls-aes192::sub-bytes state))
+             (setf state (tls-aes192::shift-rows state))
+             (when (< round 12)
+               (setf state (tls-aes192::mix-columns state)))
+             (setf state (tls-aes192::add-round-key state key-slice))
+             (format t "~%Round ~D output: ~{~2,'0X~^ ~}~%" round (coerce state 'list))))
+
+  (format t "~%Final output:     ~{~2,'0X~^ ~}~%" (coerce state 'list)))
+
+
+(let* ((key #(43 126 21 22 40 174 210 166 171 247 21 136 9 207 79 60))
+       (pt  #(107 193 190 226 46 64 159 150 233 61 126 17 115 147 23 42))
+       (round-keys (tls-aes128::expand-key-128 (copy-seq key)))
+       (state (copy-seq pt)))
+
+  (labels ((debug-shift-rows (state)
+             (let ((rows (make-array '(4 4))))
+               ;; Fill rows from column-major state
+               (loop for col from 0 to 3
+                     do (loop for row from 0 to 3
+                              for idx = (+ (* col 4) row)
+                              do (setf (aref rows row col) (aref state idx))))
+               
+               ;; Print original rows
+               (format t "~%Original rows:")
+               (loop for r from 0 to 3
+                     do (format t "~%Row ~D: ~{~2,'0X~^ ~}" r
+                                (loop for c from 0 to 3 collect (aref rows r c))))
+               
+               ;; Apply row shifts
+               (loop for r from 1 to 3
+                     do (let ((shifted (concatenate 'vector
+                                                    (subseq (loop for c from 0 to 3 collect (aref rows r c)) r)
+                                                    (subseq (loop for c from 0 to 3 collect (aref rows r c)) 0 r))))
+                          (loop for c from 0 to 3
+                                do (setf (aref rows r c) (aref shifted c)))))
+               
+               ;; Print shifted rows
+               (format t "~%Shifted rows:")
+               (loop for r from 0 to 3
+                     do (format t "~%Row ~D: ~{~2,'0X~^ ~}" r
+                                (loop for c from 0 to 3 collect (aref rows r c))))
+               
+               ;; Rebuild column-major state
+               (let ((new-state (make-array 16)))
+                 (loop for col from 0 to 3
+                       do (loop for row from 0 to 3
+                                for idx = (+ (* col 4) row)
+                                do (setf (aref new-state idx) (aref rows row col))))
+                 new-state)))
+           (hex (vec) (format nil "~{~2,'0X~^ ~}" (coerce vec 'list)))
+           (add-round-key (state rk)
+             (loop for i from 0 below 16
+                   do (setf (aref state i) (logxor (aref state i) (aref rk i)))))
+           (state->row-major (state)
+             (let ((out (make-array 16)))
+               ;; state is column-major: col-major[i] = state[col * 4 + row]
+               ;; we want row-major: out[row * 4 + col] = state[col * 4 + row]
+               (loop for col from 0 to 3
+                     do (loop for row from 0 to 3
+                              for in-idx = (+ (* col 4) row)
+                              for out-idx = (+ (* row 4) col)
+                              do (setf (aref out out-idx) (aref state in-idx))))
+               out))
+           (flatten-column-major (rows)
+             (let ((out (make-array 16)))
+               (loop for col from 0 to 3
+                     do (loop for row from 0 to 3
+                              for out-idx = (+ (* col 4) row)
+                              do (setf (aref out out-idx) (aref rows row col))))
+               out))
+           (myround (state rk round-num)
+             (format t "~%--- Round ~D ---~%" round-num)
+             (format t "Before SubBytes: ~A~%" (hex state))
+             (setf state (tls-aes128::sub-bytes state))
+             (format t "After SubBytes:  ~A~%" (hex state))
+             (format t "~%Debug SubBytes: ~A~%" (debug-shift-rows state))
+             (setf state (tls-aes128::shift-rows state))
+             (format t "After ShiftRows: ~A~%" (hex state))
+             (unless (= round-num 10)
+               (setf state (tls-aes128::mix-columns state))
+               (format t "After MixColumns:~A~%" (hex state)))
+             (format t "State before AddRoundKey: ~A~%" (hex state))
+             (format t "RoundKey: ~A~%" (hex rk))
+             (add-round-key state rk)
+             (format t "After AddRoundKey:~A~%" (hex state))
+             state))
+    
+    ;; Initial AddRoundKey
+    (format t "~%Initial plaintext: ~A~%" (hex state))
+    (add-round-key state (subseq round-keys 0 16))
+    (format t "After initial AddRoundKey: ~A~%" (hex state))
+
+    ;; Rounds 1–10
+    (loop for r from 1 to 10
+          for rk = (subseq round-keys (* r 16) (+ (* r 16) 16))
+          do (setf state (myround state rk r)))
+
+    ;; Final State Matrix
+    (let ((rows (make-array '(4 4))))
+      (loop for col from 0 to 3
+            do (loop for row from 0 to 3
+                     for idx = (+ (* col 4) row)
+                     do (setf (aref rows row col) (aref state idx))))
+      (format t "~%Final state matrix:")
+      (loop for r from 0 to 3
+            do (format t "Row ~D: ~{~2,'0X~^ ~}~%" r
+                       (loop for c from 0 to 3 collect (aref rows r c))))
+    
+    ;; Final ciphertext
+    (format t "~%Final ciphertext without column-major flattening: ~A~%" (hex state))
+    (let ((final-state (flatten-column-major rows)))
+      (format t "Final ciphertext: ~A~%" (hex final-state))
+      final-state))))
+
+(let* ((key #(43 126 21 22 40 174 210 166 171 247 21 136 9 207 79 60))
+       (pt  #(107 193 190 226 46 64 159 150 233 61 126 17 115 147 23 42))
+       (iv  #(0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15))
+       (ct  #(118 73 171 172 129 25 178 70 206 233 142 155 18 233 25 125)) ; ← this line!
+       (xor (tls-aes128::xor-bytes pt iv))
+       (cipher (tls-aes128::aes-128-encrypt-block xor key))
+       (cipher-row (tls-aes128::column-major->row-major cipher)))
+  (format t "ECB result: ~{~2,'0X~^ ~}~%"
+        (coerce (tls-aes128::column-major->row-major
+                 (tls-aes128::aes-128-encrypt-block
+                  #(107 192 188 225 42 69 153 145 225 52 116 26 127 158 25 37)
+                  key))
+                'list))
+  (equalp cipher-row ct))
+
+#|
+(defun gf-mul-trace (a b)
+  (let ((result 0))
+    (format t "Starting GF-MUL with A=~X, B=~X~%" a b)
+(loop for i downfrom 7 to 0 do
+(format t "Step ~D:~%" (- 7 i)) ; for readability 
+(format t "  B bit ~D (~X): ~A~%" i b (logbitp i b))                                                              
+(when (logbitp i b)                                                                                               
+(setf result (logxor result a))                                                                                 
+(format t "  Added A to result → Result = ~X~%" result))                                                        
+(format t "  Before shift, A = ~X~%" a)                                                                           
+(setf a (if (logbitp 7 a)                                                                                         
+(logxor (ash a 1) #x1B)                                                                               
+(ash a 1)))                                                                                           
+(setf a (logand a #xFF))                                                                                          
+(format t "  After shift, A = ~X~%" a))                                                                           
+(setf result (logand result #xFF))                                                                                        
+(format t "Final result: ~X~%" result)                                                                                    
+result))                                                                                                                  
+|#
+
+(let* ((key #(43 126 21 22 40 174 210 166 171 247 21 136 9 207 79 60))
+       (pt  #(107 193 190 226 46 64 159 150 233 61 126 17 115 147 23 42))
+       (iv  #(0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15))
+       (expected-ecb #(59 146 15 0 248 109 162 254 150 200 55 153 151 146 231 8))
+       (expected-cbc #(118 73 171 172 129 25 178 70 206 233 142 155 18 233 25 125))
+       (round-keys (tls-aes128::expand-key-128 (copy-seq key)))
+       (state (copy-seq pt)))
+
+  (labels ((hex (vec) (format nil "~{~2,'0X~^ ~}" (coerce vec 'list)))
+           (add-round-key (state rk)
+             (loop for i from 0 below 16
+                   do (setf (aref state i) (logxor (aref state i) (aref rk i)))))
+           (flatten-column-major (rows)
+             (let ((out (make-array 16)))
+               (loop for col from 0 to 3
+                     do (loop for row from 0 to 3
+                              for out-idx = (+ (* col 4) row)
+                              do (setf (aref out out-idx) (aref rows row col))))
+               out))
+           (matrix-from-state (state)
+             (let ((rows (make-array '(4 4))))
+               (loop for col from 0 to 3
+                     do (loop for row from 0 to 3
+                              for idx = (+ (* col 4) row)
+                              do (setf (aref rows row col) (aref state idx))))
+               rows))
+           (myround (state rk round-num)
+             (setf state (tls-aes128::sub-bytes state))
+             (setf state (tls-aes128::shift-rows state))
+             (unless (= round-num 10)
+               (setf state (tls-aes128::mix-columns state)))
+             (add-round-key state rk)
+             state))
+
+    ;; Manual ECB encryption with expanded key
+    (add-round-key state (subseq round-keys 0 16))
+    (loop for r from 1 to 10
+          for rk = (subseq round-keys (* r 16) (+ (* r 16) 16))
+          do (setf state (myround state rk r)))
+
+    (let* ((manual-ecb (flatten-column-major (matrix-from-state state)))
+           (ecb-result (tls-aes128::aes-128-encrypt-block pt key))
+           (cbc-result (tls-aes128::aes-128-cbc-encrypt pt key iv)))
+
+      ;; Result comparisons
+      (format t "~%--- Result Comparison ---~%")
+      (format t "Manual ECB ciphertext:  ~A~%" (hex manual-ecb))
+      (format t "Function ECB ciphertext:~A~%" (hex ecb-result))
+      (format t "Expected ECB:            ~A~%" (hex expected-ecb))
+      (format t "Match (manual == ECB fn):  ~A~%" (equalp manual-ecb ecb-result))
+      (format t "Match (ECB fn == expected): ~A~%" (equalp ecb-result expected-ecb))
+
+      (format t "~%CBC ciphertext:         ~A~%" (hex cbc-result))
+      (format t "Expected CBC:            ~A~%" (hex expected-cbc))
+      (format t "Match (CBC fn == expected): ~A~%" (equalp cbc-result expected-cbc)))))
+
+(let* ((key #(43 126 21 22 40 174 210 166 171 247 21 136 9 207 79 60))
+       (pt-xor-iv #(107 192 188 225 42 69 153 145 225 52 116 26 127 158 25 37))
+       (round-keys (tls-aes128::expand-key-128 (copy-seq key)))
+       (state (copy-seq pt-xor-iv)))
+
+  (labels ((hex (vec) (format nil "~{~2,'0X~^ ~}" (coerce vec 'list)))
+           (add-round-key (state rk)
+             (loop for i from 0 below 16
+                   do (setf (aref state i) (logxor (aref state i) (aref rk i)))))
+           (flatten-column-major (rows)
+             (let ((out (make-array 16)))
+               (loop for col from 0 to 3
+                     do (loop for row from 0 to 3
+                              for out-idx = (+ (* col 4) row)
+                              do (setf (aref out out-idx) (aref rows row col))))
+               out))
+           (matrix-from-state (state)
+             (let ((rows (make-array '(4 4))))
+               (loop for col from 0 to 3
+                     do (loop for row from 0 to 3
+                              for idx = (+ (* col 4) row)
+                              do (setf (aref rows row col) (aref state idx))))
+               rows))
+           (myround (state rk round-num)
+             (format t "~%--- Round ~D ---~%" round-num)
+             (format t "Before SubBytes: ~A~%" (hex state))
+             (setf state (tls-aes128::sub-bytes state))
+             (format t "After SubBytes:  ~A~%" (hex state))
+             (setf state (tls-aes128::shift-rows state))
+             (format t "After ShiftRows: ~A~%" (hex state))
+             (unless (= round-num 10)
+               (setf state (tls-aes128::mix-columns state))
+               (format t "After MixColumns:~A~%" (hex state)))
+             (format t "State before AddRoundKey: ~A~%" (hex state))
+             (format t "RoundKey: ~A~%" (hex rk))
+             (add-round-key state rk)
+             (format t "After AddRoundKey:~A~%" (hex state))
+             state))
+
+    ;; Initial AddRoundKey
+    (format t "~%Initial CBC input: ~A~%" (hex state))
+    (add-round-key state (subseq round-keys 0 16))
+    (format t "After initial AddRoundKey: ~A~%" (hex state))
+
+    ;; Rounds 1–10
+    (loop for r from 1 to 10
+          for rk = (subseq round-keys (* r 16) (+ (* r 16) 16))
+          do (setf state (myround state rk r)))
+
+    ;; Final State Matrix
+    (let* ((rows (matrix-from-state state))
+           (final-cipher (flatten-column-major rows)))
+      (format t "~%Final state matrix:")
+      (loop for r from 0 to 3
+            do (format t "Row ~D: ~{~2,'0X~^ ~}~%" r
+                       (loop for c from 0 to 3 collect (aref rows r c))))
+      (format t "~%Final CBC ciphertext: ~A~%" (hex final-cipher))
+      final-cipher)))
+
+(let ((w3 #(9 207 79 60))
+      (w4 #(160 250 254 23))) ; w[4]
+  (let ((rot (vector (aref w3 1) (aref w3 2) (aref w3 3) (aref w3 0))))
+    (format t "RotWord: ~{~2,'0X~^ ~}~%" (coerce rot 'list))
+    (let ((sub (map 'vector #'sbox-lookup (copy-seq rot))))
+      (format t "SubWord: ~{~2,'0X~^ ~}~%" (coerce sub 'list))
+      (setf (aref sub 0) (xor-byte (aref sub 0) (aref *rcon* 1))) ; Rcon[1]
+      (format t "Sub + Rcon: ~{~2,'0X~^ ~}~%" (coerce sub 'list))
+      (let ((w0 #(43 126 21 22)) ; w[0]
+	    result)
+        (setf result (map 'vector #'(lambda (a b) (xor-byte a b)) (copy-seq sub) (copy-seq w0)))
+	(format t "~{~x ~}~%" (coerce result 'list))
+	result))))

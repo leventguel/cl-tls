@@ -1,0 +1,4 @@
+Hello File CFB World!
+This is line two.
+Third line with symbols: @#$%^&*()
+日本語の行もテストします。

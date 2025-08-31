@@ -1,3 +1,4 @@
+(load "sha-utils.lisp")
 (load "sha1.lisp")
 (load "sha224.lisp")
 (load "sha256.lisp")

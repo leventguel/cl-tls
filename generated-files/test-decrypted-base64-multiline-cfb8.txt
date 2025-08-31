@@ -1,0 +1,4 @@
+Hello File CFB8/Base64 World!
+This is line two.
+And here’s line three — with punctuation!
+最後の行は日本語です。

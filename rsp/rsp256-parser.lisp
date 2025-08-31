@@ -1,20 +1,16 @@
 (defpackage :tls-aes-rsp256-parser
-  (:use :cl :tls-aes-utils :tls-aes256 :tls-aes-ghash :tls-aes256-gcm))
+  (:use :cl :parse-utils :shared-utils :tls-aes-utils :tls-aes256 :tls-aes-ghash :tls-aes256-gcm :tls-aes256-mac)
+  (:export :parse-ecb256-rsp :parse-ecb256-rsp-decrypt :parse-cbc256-rsp :parse-cbc256-rsp-decrypt
+	   :parse-ctr256-rsp :parse-ctr256-rsp-decrypt :parse-ofb256-rsp :parse-ofb256-rsp-decrypt
+	   :parse-cfb256-rsp :parse-cfb256-rsp-decrypt
+	   :parse256-cfb8-rsp :parse256-cfb8-rsp-decrypt
+	   :parse256-cfb1-rsp :parse256-cfb1-rsp-decrypt
+	   :parse256-gcm-rsp :parse256-gcm-rsp-decrypt
+	   :parse-aes256-cmac-rsp :parse-aes256-cmac-rsp-verify))
 
 (in-package :tls-aes-rsp256-parser)
 
-(defun bracketed-line-p (line)
-  "Returns true if line starts with [ and ends with ]."
-  (and (> (length line) 2)
-       (char= (char line 0) #\[)
-       (char= (char line (1- (length line))) #\])))
-
-(defun starts-with (prefix string)
-  "Returns T if STRING starts with PREFIX."
-  (and (<= (length prefix) (length string))
-       (string= prefix (subseq string 0 (length prefix)))))
-
-(defun parse-ecb256-rsp (filename)
+(defun parse-ecb256-rsp (filename &optional verbose)
   "Parses a NIST ECB256 .rsp file and returns a list of test cases."
   (with-open-file (stream filename)
     (let ((cases '())
@@ -41,12 +37,13 @@
                   (progn
                     (setf (gethash "CIPHERTEXT" current-case)
                           (hex-string-to-byte-vector (subseq line 12)))
-                    (format t "~%Parsed ECB256 test case ~D" (gethash "COUNT" current-case))
+		    (when verbose
+                      (format t "~%Parsed ECB256 test case ~D" (gethash "COUNT" current-case)))
                     (push current-case cases)
                     (setf current-case (make-hash-table :test 'equal))))))))
       (nreverse cases))))
 
-(defun parse-ecb256-rsp-decrypt (filename)
+(defun parse-ecb256-rsp-decrypt (filename &optional verbose)
   "Parses a NIST ECB256 .rsp file and returns a list of test cases."
   (with-open-file (stream filename)
     (let ((cases '())
@@ -73,12 +70,13 @@
                   (progn
                     (setf (gethash "PLAINTEXT" current-case)
                           (hex-string-to-byte-vector (subseq line 12)))
-                    (format t "~%Parsed ECB256 DECRYPT test case ~D" (gethash "COUNT" current-case))
+		    (when verbose
+                      (format t "~%Parsed ECB256 DECRYPT test case ~D" (gethash "COUNT" current-case)))
                     (push current-case cases)
                     (setf current-case (make-hash-table :test 'equal))))))))
       (nreverse cases))))
 
-(defun parse-cbc256-rsp (filename)
+(defun parse-cbc256-rsp (filename &optional verbose)
   "Parses a NIST CBC256 .rsp file and returns a list of ENCRYPT test cases."
   (with-open-file (stream filename)
     (let ((cases '())
@@ -109,12 +107,13 @@
                  ((starts-with "CIPHERTEXT = " line)
                   (setf (gethash "CIPHERTEXT" current-case)
                         (hex-string-to-byte-vector (subseq line 12)))
-                  (format t "~%Parsed CBC256 test case ~D" (gethash "COUNT" current-case))
+		  (when verbose
+                    (format t "~%Parsed CBC256 test case ~D" (gethash "COUNT" current-case)))
                   (push current-case cases)
                   (setf current-case (make-hash-table :test 'equal)))))))
       (nreverse cases))))
 
-(defun parse-cbc256-rsp-decrypt (filename)
+(defun parse-cbc256-rsp-decrypt (filename &optional verbose)
   "Parses a NIST CBC256 .rsp file and returns a list of DECRYPT test cases."
   (with-open-file (stream filename)
     (let ((cases '())
@@ -145,12 +144,13 @@
                  ((starts-with "PLAINTEXT = " line)
                   (setf (gethash "PLAINTEXT" current-case)
                         (hex-string-to-byte-vector (subseq line 11)))
-                  (format t "~%Parsed CBC256 decrypt test case ~D" (gethash "COUNT" current-case))
+		  (when verbose
+                    (format t "~%Parsed CBC256 decrypt test case ~D" (gethash "COUNT" current-case)))
                   (push current-case cases)
                   (setf current-case (make-hash-table :test 'equal)))))))
       (nreverse cases))))
 
-(defun parse-ctr256-rsp (filename)
+(defun parse-ctr256-rsp (filename &optional verbose)
   "Parses a NIST CTR256 .rsp file and returns a list of ENCRYPT test cases."
   (with-open-file (stream filename)
     (let ((cases '())
@@ -181,12 +181,13 @@
                  ((starts-with "CIPHERTEXT = " line)
                   (setf (gethash "CIPHERTEXT" current-case)
                         (hex-string-to-byte-vector (subseq line 12)))
-                  (format t "~%Parsed CTR256 test case ~D" (gethash "COUNT" current-case))
+		  (when verbose
+                    (format t "~%Parsed CTR256 test case ~D" (gethash "COUNT" current-case)))
                   (push current-case cases)
                   (setf current-case (make-hash-table :test 'equal)))))))
       (nreverse cases))))
 
-(defun parse-ctr256-rsp-decrypt (filename)
+(defun parse-ctr256-rsp-decrypt (filename &optional verbose)
   "Parses a NIST CTR256 .rsp file and returns a list of DECRYPT test cases."
   (with-open-file (stream filename)
     (let ((cases '())
@@ -217,12 +218,13 @@
                  ((starts-with "PLAINTEXT = " line)
                   (setf (gethash "PLAINTEXT" current-case)
                         (hex-string-to-byte-vector (subseq line 11)))
-                  (format t "~%Parsed CTR256 test case ~D" (gethash "COUNT" current-case))
+		  (when verbose
+                    (format t "~%Parsed CTR256 test case ~D" (gethash "COUNT" current-case)))
                   (push current-case cases)
                   (setf current-case (make-hash-table :test 'equal)))))))
       (nreverse cases))))
 
-(defun parse-ofb256-rsp (filename)
+(defun parse-ofb256-rsp (filename &optional verbose)
   "Parses a NIST OFB256 .rsp file and returns a list of ENCRYPT test cases."
   (with-open-file (stream filename)
     (let ((cases '())
@@ -253,12 +255,13 @@
                  ((starts-with "CIPHERTEXT = " line)
                   (setf (gethash "CIPHERTEXT" current-case)
                         (hex-string-to-byte-vector (subseq line 12)))
-                  (format t "~%Parsed OFB256 test case ~D" (gethash "COUNT" current-case))
+		  (when verbose
+                    (format t "~%Parsed OFB256 test case ~D" (gethash "COUNT" current-case)))
                   (push current-case cases)
                   (setf current-case (make-hash-table :test 'equal)))))))
       (nreverse cases))))
 
-(defun parse-ofb256-rsp-decrypt (filename)
+(defun parse-ofb256-rsp-decrypt (filename &optional verbose)
   "Parses a NIST OFB256 .rsp file and returns a list of DECRYPT test cases."
   (with-open-file (stream filename)
     (let ((cases '())
@@ -289,12 +292,13 @@
                  ((starts-with "PLAINTEXT = " line)
                   (setf (gethash "PLAINTEXT" current-case)
                         (hex-string-to-byte-vector (subseq line 11)))
-                  (format t "~%Parsed OFB256 test case ~D" (gethash "COUNT" current-case))
+		  (when verbose
+                    (format t "~%Parsed OFB256 test case ~D" (gethash "COUNT" current-case)))
                   (push current-case cases)
                   (setf current-case (make-hash-table :test 'equal)))))))
       (nreverse cases))))
 
-(defun parse-cfb256-rsp (filename)
+(defun parse-cfb256-rsp (filename &optional verbose)
   "Parses a NIST CFB256 .rsp file and returns a list of ENCRYPT test cases."
   (with-open-file (stream filename)
     (let ((cases '())
@@ -325,12 +329,13 @@
                  ((starts-with "CIPHERTEXT = " line)
                   (setf (gethash "CIPHERTEXT" current-case)
                         (hex-string-to-byte-vector (subseq line 12)))
-                  (format t "~%Parsed CFB256 test case ~D" (gethash "COUNT" current-case))
+		  (when verbose
+                    (format t "~%Parsed CFB256 test case ~D" (gethash "COUNT" current-case)))
                   (push current-case cases)
                   (setf current-case (make-hash-table :test 'equal)))))))
       (nreverse cases))))
 
-(defun parse-cfb256-rsp-decrypt (filename)
+(defun parse-cfb256-rsp-decrypt (filename &optional verbose)
   "Parses a NIST CFB256 .rsp file and returns a list of DECRYPT test cases."
   (with-open-file (stream filename)
     (let ((cases '())
@@ -361,12 +366,13 @@
                  ((starts-with "PLAINTEXT = " line)
                   (setf (gethash "PLAINTEXT" current-case)
                         (hex-string-to-byte-vector (subseq line 11)))
-                  (format t "~%Parsed CFB256 test case ~D" (gethash "COUNT" current-case))
+		  (when verbose
+                    (format t "~%Parsed CFB256 test case ~D" (gethash "COUNT" current-case)))
                   (push current-case cases)
                   (setf current-case (make-hash-table :test 'equal)))))))
       (nreverse cases))))
 
-(defun parse256-cfb8-rsp (filename)
+(defun parse256-cfb8-rsp (filename &optional verbose)
   "Parses a NIST CFB8 .rsp file and returns a list of ENCRYPT test cases."
   (with-open-file (stream filename)
     (let ((cases '())
@@ -397,12 +403,13 @@
                  ((starts-with "CIPHERTEXT = " line)
                   (setf (gethash "CIPHERTEXT" current-case)
                         (hex-string-to-byte-vector (subseq line 12)))
-                  (format t "~%Parsed CFB8 test case ~D" (gethash "COUNT" current-case))
+		  (when verbose
+                    (format t "~%Parsed CFB8 test case ~D" (gethash "COUNT" current-case)))
                   (push current-case cases)
                   (setf current-case (make-hash-table :test 'equal)))))))
       (nreverse cases))))
 
-(defun parse256-cfb8-rsp-decrypt (filename)
+(defun parse256-cfb8-rsp-decrypt (filename &optional verbose)
   "Parses a NIST CFB8 .rsp file and returns a list of DECRYPT test cases."
   (with-open-file (stream filename)
     (let ((cases '())
@@ -433,12 +440,13 @@
                  ((starts-with "PLAINTEXT = " line)
                   (setf (gethash "PLAINTEXT" current-case)
                         (hex-string-to-byte-vector (subseq line 11)))
-                  (format t "~%Parsed CFB8 test case ~D" (gethash "COUNT" current-case))
+		  (when verbose
+                    (format t "~%Parsed CFB8 test case ~D" (gethash "COUNT" current-case)))
                   (push current-case cases)
                   (setf current-case (make-hash-table :test 'equal)))))))
       (nreverse cases))))
 
-(defun parse256-cfb1-rsp (filename)
+(defun parse256-cfb1-rsp (filename &optional verbose)
   "Parses a NIST CFB1 .rsp file and returns a list of ENCRYPT test cases."
   (with-open-file (stream filename)
     (let ((cases '())
@@ -465,20 +473,21 @@
                         (hex-string-to-byte-vector (subseq line 5))))
                  ((starts-with "PLAINTEXT = " line)
                   (setf (gethash "PLAINTEXT" current-case)
-                        (bit-string-to-byte-vector (subseq line 11)))
+                        (bitstring-to-byte-vector (subseq line 11)))
 		  (setf (gethash "PLAINTEXT-BITS" current-case)
 			(length (string-trim '(#\Space #\Tab #\Return #\Newline) (subseq line 11)))))
                  ((starts-with "CIPHERTEXT = " line)
                   (setf (gethash "CIPHERTEXT" current-case)
-                        (bit-string-to-byte-vector (subseq line 12)))
+                        (bitstring-to-byte-vector (subseq line 12)))
 		  (setf (gethash "CIPHERTEXT-BITS" current-case)
 			(length (string-trim '(#\Space #\Tab #\Return #\Newline) (subseq line 12))))
-                  (format t "~%Parsed CFB1 test case ~D" (gethash "COUNT" current-case))
+		  (when verbose
+                    (format t "~%Parsed CFB1 test case ~D" (gethash "COUNT" current-case)))
                   (push current-case cases)
                   (setf current-case (make-hash-table :test 'equal)))))))
       (nreverse cases))))
 
-(defun parse256-cfb1-rsp-decrypt (filename)
+(defun parse256-cfb1-rsp-decrypt (filename &optional verbose)
   "Parses a NIST CFB1 .rsp file and returns a list of DECRYPT test cases."
   (with-open-file (stream filename)
     (let ((cases '())
@@ -505,15 +514,16 @@
                         (hex-string-to-byte-vector (subseq line 5))))
                  ((starts-with "CIPHERTEXT = " line)
                   (setf (gethash "CIPHERTEXT" current-case)
-                        (bit-string-to-byte-vector (subseq line 12)))
+                        (bitstring-to-byte-vector (subseq line 12)))
 		  (setf (gethash "CIPHERTEXT-BITS" current-case)
 			(length (string-trim '(#\Space #\Tab #\Return #\Newline) (subseq line 12)))))
                  ((starts-with "PLAINTEXT = " line)
                   (setf (gethash "PLAINTEXT" current-case)
-                        (bit-string-to-byte-vector (subseq line 11)))
+                        (bitstring-to-byte-vector (subseq line 11)))
 		  (setf (gethash "PLAINTEXT-BITS" current-case)
 			(length (string-trim '(#\Space #\Tab #\Return #\Newline) (subseq line 11))))
-                  (format t "~%Parsed CFB1 test case ~D" (gethash "COUNT" current-case))
+		  (when verbose
+                    (format t "~%Parsed CFB1 test case ~D" (gethash "COUNT" current-case)))
                   (push current-case cases)
                   (setf current-case (make-hash-table :test 'equal)))))))
       (nreverse cases))))
@@ -642,313 +652,77 @@
 	       (setf current (make-hash-table :test 'equal)))))
       (nreverse cases))))
 
-(defun test-ecb256-rsp (filename)
-  "Runs ECB encryption tests from a NIST .rsp file."
-  (let ((cases (parse-ecb256-rsp filename))
-        (pass 0)
-        (fail 0))
-    (dolist (case cases)
-      (let* ((key (gethash "KEY" case))
-	     (plaintext (gethash "PLAINTEXT" case))
-	     (expected-ciphertext (gethash "CIPHERTEXT" case))
-	     (expanded-key (expand-key-256 key))
-	     (ciphertext (aes256-ecb-encrypt plaintext expanded-key t)))
-        (if (equalp ciphertext expected-ciphertext)
-	    (incf pass)
-	    (progn
-	      (incf fail)
-	      (format t "~%❌ ECB256 Encrypt Test ~D failed" (gethash "COUNT" case))))))
-    (format t "~%✅ ECB256 Encrypt RSP Summary: ~D passed, ~D failed~%" pass fail)))
+(defun parse-aes256-cmac-rsp (filename &optional verbose)
+  "Parses a NIST CMAC256 .rsp file and returns a list of test cases."
+  (with-open-file (stream filename)
+    (let ((cases '())
+          (current-case (make-hash-table :test 'equal)))
+      (loop for line = (read-line stream nil)
+            while line do
+            (cond
+              ((string= line "") nil) ; skip blank lines
+              ((starts-with "Count = " line)
+               (setf (gethash "Count" current-case)
+                     (parse-integer (subseq line 8))))
+              ((starts-with "Klen = " line)
+               (setf (gethash "Klen" current-case)
+                     (parse-integer (subseq line 7))))
+              ((starts-with "Mlen = " line)
+	       (setf (gethash "Mlen" current-case)
+                     (parse-integer (subseq line 7))))
+              ((starts-with "Tlen = " line)
+               (setf (gethash "Tlen" current-case)
+                     (parse-integer (subseq line 7))))
+	      ((starts-with "Key = " line)
+               (setf (gethash "Key" current-case)
+                     (hex-string-to-byte-vector (subseq line 6))))
+              ((starts-with "Msg = " line)
+               (setf (gethash "Msg" current-case)
+                     (hex-string-to-byte-vector (subseq line 6))))
+	      ((starts-with "Mac = " line)
+               (setf (gethash "Mac" current-case)
+                     (hex-string-to-byte-vector (subseq line 6)))
+	       (when verbose
+		 (format t "~%Parsed CMAC256 test case ~D" (gethash "Count" current-case)))
+               (push current-case cases)
+               (setf current-case (make-hash-table :test 'equal)))))
+      (nreverse cases))))
 
-(defun test-ecb256-rsp-decrypt (filename)
-  "Runs ECB decryption tests from a NIST .rsp file."
-  (let ((cases (parse-ecb256-rsp-decrypt filename)) ; reuse your existing ECB parser
-        (pass 0)
-        (fail 0))
-    (dolist (case cases)
-      (let* ((key (gethash "KEY" case))
-	     (expected-plaintext (gethash "PLAINTEXT" case))
-	     (ciphertext (gethash "CIPHERTEXT" case))
-	     (recovered (aes256-ecb-decrypt ciphertext key t)))
-        (if (equalp recovered expected-plaintext)
-	    (incf pass)
-	    (progn
-	      (incf fail)
-	      (format t "~%❌ ECB256 Decrypt Test ~D failed" (gethash "COUNT" case))))))
-    (format t "~%✅ ECB256 DECRYPT RSP Summary: ~D passed, ~D failed~%" pass fail)))
-
-(defun test-cbc256-rsp (filename)
-  (let ((cases (parse-cbc256-rsp filename))
-        (pass 0)
-        (fail 0))
-    (dolist (case cases)
-      (let* ((key (gethash "KEY" case))
-	     (iv (gethash "IV" case))
-	     (plaintext (gethash "PLAINTEXT" case))
-	     (expected-ciphertext (gethash "CIPHERTEXT" case))
-	     (ciphertext (aes256-cbc-encrypt plaintext key iv t))
-	     (recovered (aes256-cbc-decrypt ciphertext key iv t)))
-        (if (and (equalp ciphertext expected-ciphertext)
-                 (equalp plaintext recovered))
-	    (incf pass)
-	    (progn
-	      (incf fail)
-	      (format t "~%❌ CBC256 Encrypt Test ~D failed" (gethash "COUNT" case))))))
-    (format t "~%✅ CBC256 Encrypt RSP Summary: ~D passed, ~D failed~%" pass fail)))
-
-(defun test-cbc256-rsp-decrypt (filename)
-  "Runs CBC decryption tests from a NIST .rsp file."
-  (let ((cases (parse-cbc256-rsp-decrypt filename))
-        (pass 0)
-        (fail 0))
-    (dolist (case cases)
-      (let* ((key (gethash "KEY" case))
-	     (iv (gethash "IV" case))
-	     (ciphertext (gethash "CIPHERTEXT" case))
-	     (expected-plaintext (gethash "PLAINTEXT" case))
-	     (recovered (aes256-cbc-decrypt ciphertext key iv t)))
-        (if (equalp recovered expected-plaintext)
-	    (incf pass)
-	    (progn
-	      (incf fail)
-	      (format t "~%❌ CBC256 Decrypt Test ~D failed" (gethash "COUNT" case))))))
-    (format t "~%✅ CBC256 DECRYPT RSP Summary: ~D passed, ~D failed~%" pass fail)))
-
-(defun test-ctr256-rsp (filename)
-  "Runs CTR encryption tests from a NIST .rsp file."
-  (let ((cases (parse-ctr256-rsp filename))
-        (pass 0)
-        (fail 0))
-    (dolist (case cases)
-      (let* ((key (gethash "KEY" case))
-	     (iv (gethash "IV" case))
-	     (plaintext (gethash "PLAINTEXT" case))
-	     (expected-ciphertext (gethash "CIPHERTEXT" case))
-	     (ciphertext (aes256-ctr-encrypt plaintext key iv)))
-        (if (equalp ciphertext expected-ciphertext)
-	    (incf pass)
-	    (progn
-	      (incf fail)
-	      (format t "~%❌ CTR256 ENCRYPT Test ~D failed" (gethash "COUNT" case))))))
-    (format t "~%✅ CTR256 ENCRYPT Summary: ~D passed, ~D failed~%" pass fail)))
-
-(defun test-ctr256-rsp-decrypt (filename)
-  "Runs CTR decryption tests from a NIST .rsp file."
-  (let ((cases (parse-ctr256-rsp-decrypt filename))
-        (pass 0)
-        (fail 0))
-    (dolist (case cases)
-      (let* ((key (gethash "KEY" case))
-	     (iv (gethash "IV" case))
-	     (ciphertext (gethash "CIPHERTEXT" case))
-	     (expected-plaintext (gethash "PLAINTEXT" case))
-	     (recovered (aes256-ctr-decrypt ciphertext key iv)))
-        (if (equalp recovered expected-plaintext)
-	    (incf pass)
-	    (progn
-	      (incf fail)
-	      (format t "~%❌ CTR256 DECRYPT Test ~D failed" (gethash "COUNT" case))))))
-    (format t "~%✅ CTR256 DECRYPT Summary: ~D passed, ~D failed~%" pass fail)))
-
-(defun test-ofb256-rsp (filename)
-  "Runs OFB128 encryption tests from a NIST .rsp file."
-  (let ((cases (parse-ofb256-rsp filename)) ; use your parser here
-        (pass 0)
-        (fail 0))
-    (dolist (case cases)
-      (let* ((key (gethash "KEY" case))
-	     (iv (gethash "IV" case))
-	     (plaintext (gethash "PLAINTEXT" case))
-	     (expected-ciphertext (gethash "CIPHERTEXT" case))
-	     (ciphertext (aes256-ofb-encrypt plaintext key iv)))
-        (if (equalp ciphertext expected-ciphertext)
-	    (incf pass)
-	    (progn
-	      (incf fail)
-	      (format t "~%❌ OFB256 ENCRYPT Test ~D failed" (gethash "COUNT" case))))))
-    (format t "~%✅ OFB256 ENCRYPT Summary: ~D passed, ~D failed~%" pass fail)))
-
-(defun test-ofb256-rsp-decrypt (filename)
-  "Runs OFB256 decryption tests from a NIST .rsp file."
-  (let ((cases (parse-ofb256-rsp-decrypt filename))
-        (pass 0)
-        (fail 0))
-    (dolist (case cases)
-      (let* ((key (gethash "KEY" case))
-	     (iv (gethash "IV" case))
-	     (ciphertext (gethash "CIPHERTEXT" case))
-	     (expected-plaintext (gethash "PLAINTEXT" case))
-	     (recovered (aes256-ofb-decrypt ciphertext key iv)))
-        (if (equalp recovered expected-plaintext)
-	    (incf pass)
-	    (progn
-	      (incf fail)
-	      (format t "~%❌ OFB256 DECRYPT Test ~D failed" (gethash "COUNT" case))))))
-    (format t "~%✅ OFB256 DECRYPT Summary: ~D passed, ~D failed~%" pass fail)))
-
-(defun test-cfb256-rsp (filename)
-  "Runs CFB256 encryption tests from a NIST .rsp file."
-  (let ((cases (parse-cfb256-rsp filename))
-        (pass 0)
-        (fail 0))
-    (dolist (case cases)
-      (let* ((key (gethash "KEY" case))
-	     (iv (gethash "IV" case))
-	     (plaintext (gethash "PLAINTEXT" case))
-	     (expected-ciphertext (gethash "CIPHERTEXT" case))
-	     (ciphertext (aes256-cfb-encrypt plaintext key iv)))
-        (if (equalp ciphertext expected-ciphertext)
-	    (incf pass)
-	    (progn
-	      (incf fail)
-	      (format t "~%❌ CFB256 ENCRYPT Test ~D failed" (gethash "COUNT" case))))))
-    (format t "~%✅ CFB256 ENCRYPT Summary: ~D passed, ~D failed~%" pass fail)))
-
-(defun test-cfb256-rsp-decrypt (filename)
-  "Runs CFB128 decryption tests from a NIST .rsp file."
-  (let ((cases (parse-cfb256-rsp-decrypt filename))
-        (pass 0)
-        (fail 0))
-    (dolist (case cases)
-      (let* ((key (gethash "KEY" case))
-	     (iv (gethash "IV" case))
-	     (ciphertext (gethash "CIPHERTEXT" case))
-	     (expected-plaintext (gethash "PLAINTEXT" case))
-	     (recovered (aes256-cfb-decrypt ciphertext key iv)))
-        (if (equalp recovered expected-plaintext)
-	    (incf pass)
-	    (progn
-	      (incf fail)
-	      (format t "~%❌ CFB256 DECRYPT Test ~D failed" (gethash "COUNT" case))))))
-    (format t "~%✅ CFB256 DECRYPT Summary: ~D passed, ~D failed~%" pass fail)))
-
-(defun test256-cfb8-rsp (filename)
-  (let ((cases (parse256-cfb8-rsp filename))
-        (pass 0)
-        (fail 0))
-    (dolist (case cases)
-      (let ((ciphertext (aes256-cfb8-xcrypt
-                         (gethash "PLAINTEXT" case)
-                         (gethash "KEY" case)
-                         (gethash "IV" case))))
-        (if (equalp ciphertext (gethash "CIPHERTEXT" case))
-	    (incf pass)
-	    (progn (incf fail)
-		   (format t "~%❌ CFB8 ENCRYPT Test ~D failed" (gethash "COUNT" case))))))
-    (format t "~%✅ CFB8 ENCRYPT Summary: ~D passed, ~D failed~%" pass fail)))
-
-(defun test256-cfb8-rsp-decrypt (filename)
-  (let ((cases (parse256-cfb8-rsp-decrypt filename))
-        (pass 0)
-        (fail 0))
-    (dolist (case cases)
-      (let ((recovered (aes256-cfb8-xcrypt
-                        (gethash "CIPHERTEXT" case)
-                        (gethash "KEY" case)
-                        (gethash "IV" case)
-                        :decrypt t)))
-        (if (equalp recovered (gethash "PLAINTEXT" case))
-	    (incf pass)
-	    (progn (incf fail)
-		   (format t "~%❌ CFB8 DECRYPT Test ~D failed" (gethash "COUNT" case))))))
-    (format t "~%✅ CFB8 DECRYPT Summary: ~D passed, ~D failed~%" pass fail)))
-
-(defun test256-cfb1-rsp (filename)
-  (let ((cases (parse256-cfb1-rsp filename))
-        (pass 0)
-        (fail 0))
-    (dolist (case cases)
-      (let ((ciphertext (aes256-cfb1-xcrypt
-                         (gethash "PLAINTEXT" case)
-                         (gethash "KEY" case)
-                         (gethash "IV" case)))
-	    (bit-count (gethash "CIPHERTEXT-BITS" case)))
-        (if (bits-equal-p ciphertext (gethash "CIPHERTEXT" case) bit-count)
-	    (incf pass)
-	    (progn (incf fail)
-		   (format t "~%❌ CFB1 ENCRYPT Test ~D failed" (gethash "COUNT" case))))))
-    (format t "~%✅ CFB1 ENCRYPT Summary: ~D passed, ~D failed~%" pass fail)))
-
-(defun test256-cfb1-rsp-decrypt (filename)
-  (let ((cases (parse256-cfb1-rsp-decrypt filename))
-        (pass 0)
-        (fail 0))
-    (dolist (case cases)
-      (let ((recovered (aes256-cfb1-xcrypt
-                        (gethash "CIPHERTEXT" case)
-                        (gethash "KEY" case)
-                        (gethash "IV" case)
-                        :decrypt t))
-	    (bit-count (gethash "PLAINTEXT-BITS" case)))
-        (if (bits-equal-p recovered (gethash "PLAINTEXT" case) bit-count)
-	    (incf pass)
-	    (progn (incf fail)
-		   (format t "~%❌ CFB1 DECRYPT Test ~D failed" (gethash "COUNT" case))))))
-    (format t "~%✅ CFB1 DECRYPT Summary: ~D passed, ~D failed~%" pass fail)))
-
-(defun test256-gcm-rsp (filename)
-  "Runs AES-GCM encryption tests from NIST RSP file."
-  (let ((cases (parse256-gcm-rsp filename))
-        (pass 0)
-        (fail 0))
-    (dolist (case cases)
-      (let* ((taglen   (or (gethash "Taglen" case) 128))
-	     (aad      (gethash "AAD" case))
-	     (aad-len  (or (gethash "AADlen" case) (length aad)))
-	     (pt       (gethash "Plaintext" case))
-	     (ctlen    (length pt)))
-        (multiple-value-bind (ct tag)
-	    (aes256-gcm-encrypt pt
-			     (gethash "Key" case)
-			     (gethash "IV" case)
-			     aad
-			     taglen
-			     aad-len
-			     ctlen)
-	  (if (and (equalp ct (gethash "Ciphertext" case))
-		   (equalp tag (gethash "Tag" case)))
-	      (progn
-                (incf pass)
-		(format t "~%Test ~D uses taglen: ~D aad-len: ~D and aad: ~A" (gethash "Count" case)
-			(gethash "Taglen" case) (gethash "AADlen" case) (byte-vector-to-hex-string (gethash "AAD" case)))
-                (format t "~%✅ Encrypt Test ~D passed with taglen: ~D aad-len: ~D and aad: ~A" (gethash "Count" case) (gethash "Taglen" case) (gethash "AADlen" case) (byte-vector-to-hex-string (gethash "AAD" case))))
-	      (progn
-                (incf fail)
-                (format t "~%❌ Encrypt Test ~D failed with taglen: ~D aad-len: ~D and aad: ~A" (gethash "Count" case) (gethash "Taglen" case) (gethash "AADlen" case) (byte-vector-to-hex-string (gethash "AAD" case)))
-		;; 🔍 Add this comparison logging here:
-		(format t "~%Expected tag: ~S" (byte-vector-to-hex-string (gethash "Tag" case)))
-		(format t "~%Computed tag: ~S" (byte-vector-to-hex-string tag)))))))
-    (format t "~%🧾 AES256 GCM Encrypt Summary: ~D passed, ~D failed~%" pass fail)))
-
-(defun test256-gcm-rsp-decrypt (filename)
-  "Runs AES-GCM decryption tests from NIST RSP file."
-  (let ((cases (parse256-gcm-rsp-decrypt filename))
-        (pass 0)
-        (fail 0))
-    (dolist (case cases)
-      (let* ((taglen   (or (gethash "Taglen" case) 128))
-	     (aad      (gethash "AAD" case))
-	     (aad-len  (or (gethash "AADlen" case) (length aad)))
-	     (ct       (gethash "Ciphertext" case))
-	     (ctlen    (length ct)))
-        (handler-case
-	    (let ((pt (aes256-gcm-decrypt ct
-				       (gethash "Key" case)
-				       (gethash "IV" case)
-				       (gethash "Tag" case)
-				       aad
-				       taglen
-				       aad-len
-				       ctlen)))
-	      (if (equalp pt (gethash "Plaintext" case))
-		  (progn
-		    (incf pass)
-		    (format t "~%✅ Decrypt Test ~D passed" (gethash "Count" case)))
-		  (progn
-		    (incf fail)
-		    (format t "~%❌ Decrypt Test ~D failed (mismatched plaintext)" (gethash "Count" case)))))
-	  (error ()
-	    (progn
-	      (incf fail)
-	      (format t "~%❌ Decrypt Test ~D failed (tag verification error)" (gethash "Count" case)))))))
-    (format t "~%🧾 AES256 GCM Decrypt Summary: ~D passed, ~D failed~%" pass fail)))
+(defun parse-aes256-cmac-rsp-verify (filename &optional verbose)
+  "Parses a NIST CMAC256 .rsp file and returns a list of test cases."
+  (with-open-file (stream filename)
+    (let ((cases '())
+          (current-case (make-hash-table :test 'equal)))
+      (loop for line = (read-line stream nil)
+            while line do
+            (cond
+              ((string= line "") nil) ; skip blank lines
+              ((starts-with "Count = " line)
+               (setf (gethash "Count" current-case)
+                     (parse-integer (subseq line 8))))
+              ((starts-with "Klen = " line)
+               (setf (gethash "Klen" current-case)
+                     (parse-integer (subseq line 7))))
+              ((starts-with "Mlen = " line)
+	       (setf (gethash "Mlen" current-case)
+                     (parse-integer (subseq line 7))))
+              ((starts-with "Tlen = " line)
+               (setf (gethash "Tlen" current-case)
+                     (parse-integer (subseq line 7))))
+	      ((starts-with "Key = " line)
+               (setf (gethash "Key" current-case)
+                     (hex-string-to-byte-vector (subseq line 6))))
+              ((starts-with "Msg = " line)
+               (setf (gethash "Msg" current-case)
+                     (hex-string-to-byte-vector (subseq line 6))))
+	      ((starts-with "Mac = " line)
+               (setf (gethash "Mac" current-case)
+                     (hex-string-to-byte-vector (subseq line 6))))
+	      ((starts-with "Result = " line)
+               (setf (gethash "Result" current-case)
+		     (string-trim " " (subseq line (length "Result = "))))
+	       (when verbose
+		 (format t "~%Parsed CMAC256 test case ~D" (gethash "Count" current-case)))
+               (push current-case cases)
+               (setf current-case (make-hash-table :test 'equal)))))
+      (nreverse cases))))

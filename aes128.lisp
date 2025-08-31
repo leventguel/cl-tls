@@ -1,9 +1,13 @@
 (defpackage :tls-aes128
-  (:use :cl :tls-aes-utils)
-  (:export :expand-key-128 :aes128-ecb-encrypt-block :aes128-ecb-encrypt :aes128-ecb-decrypt-block :aes128-ecb-decrypt
-	   :aes128-cbc-encrypt :aes128-cbc-decrypt :aes128-ctr-encrypt :aes128-ctr-decrypt :aes128-ofb-encrypt
-	   :aes128-ofb-decrypt :aes128-cfb-xcrypt :aes128-cfb-encrypt :aes128-cfb-decrypt :aes128-cfb8-xcrypt
-	   :aes128-cfb1-xcrypt))
+  (:use :cl :shared-utils :tls-aes-utils)
+  (:export :expand-key-128
+	   :aes128-ecb-encrypt-block :aes128-ecb-encrypt :aes128-ecb-decrypt-block :aes128-ecb-decrypt
+	   :aes128-cbc-encrypt-block :aes128-cbc-encrypt :aes128-cbc-decrypt-block :aes128-cbc-decrypt
+	   :aes128-ctr-encrypt :aes128-ctr-decrypt
+	   :aes128-ofb-encrypt :aes128-ofb-decrypt
+	   :aes128-cfb-xcrypt :aes128-cfb-encrypt :aes128-cfb-decrypt
+	   :aes128-cfb8-xcrypt :aes128-cfb8-encrypt :aes128-cfb8-decrypt
+	   :aes128-cfb1-xcrypt :aes128-cfb1-encrypt :aes128-cfb1-decrypt))
 
 (in-package :tls-aes128)
 
@@ -710,10 +714,10 @@ Each block is padded by aes128-ecb-encrypt-block if needed."
         (setf counter (increment-counter counter))))
     output))
 
-(defun aes128-ctr-encrypt (plaintext key iv &optional (validate nil))
+(defun aes128-ctr-encrypt (plaintext key iv)
   (aes128-ctr-xcrypt plaintext key iv))
 
-(defun aes128-ctr-decrypt (ciphertext key iv &optional (validate nil))
+(defun aes128-ctr-decrypt (ciphertext key iv &optional)
   (aes128-ctr-xcrypt ciphertext key iv))
 
 (defun aes128-ofb-xcrypt (input key iv &optional (block-size 16))

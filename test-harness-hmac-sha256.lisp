@@ -1,36 +1,11 @@
-(ql:quickload :ironclad)
+(in-package :hmac-sha256)
+;; test-harness-hmac-sha256.lisp
 
+(load "~/clocc/src/ssl/sha-utils.lisp")
 (load "~/clocc/src/ssl/hmac-sha256.lisp") ; Adjust path if needed
 
-(defun ironclad-hmac-sha256 (key message)
-  (let* ((block-size 64)
-         (key (if (> (length key) block-size)
-                  (ironclad:digest-sequence :sha256 key)
-                  key))
-         (key (concatenate '(vector (unsigned-byte 8))
-                           key
-                           (make-array (- block-size (length key))
-                                       :element-type '(unsigned-byte 8)
-                                       :initial-element 0)))
-         (ipad (make-array block-size :element-type '(unsigned-byte 8)
-                                      :initial-element #x36))
-         (opad (make-array block-size :element-type '(unsigned-byte 8)
-                                      :initial-element #x5c)))
-    (loop for i from 0 below block-size do
-      (setf (aref ipad i) (logxor (aref ipad i) (aref key i))
-            (aref opad i) (logxor (aref opad i) (aref key i))))
-    (ironclad:byte-array-to-hex-string
-     (ironclad:digest-sequence :sha256
-       (concatenate '(vector (unsigned-byte 8))
-                    opad
-                    (ironclad:digest-sequence :sha256
-                      (concatenate '(vector (unsigned-byte 8)) ipad message)))))))
-
 (defun my-hmac-sha256 (key message)
-  (bytes-to-hex (hmac-sha256 key message)))
-
-(defun string-to-bytes (str)
-  (map 'vector #'char-code str))
+  (hmac-sha256-hex key message))
 
 (defun run-test (label key message)
   (let* ((expected (string-downcase (ironclad-hmac-sha256 key message)))
@@ -43,7 +18,7 @@
 
 (defun run-all-tests ()
   ;; RFC 4231 Test Case 1
-  (run-test "Test 1: key = 0x0b * 20, msg = 'Hi There'"
+  (run-test "Test 1: key = #x0b * 20, msg = 'Hi There'"
             (make-array 20 :element-type '(unsigned-byte 8) :initial-element #x0b)
             (string-to-bytes "Hi There"))
 
@@ -53,7 +28,7 @@
             (string-to-bytes "what do ya want for nothing?"))
 
   ;; RFC 4231 Test Case 3
-  (run-test "Test 3: key = 0xaa * 20, msg = 0xdd * 50"
+  (run-test "Test 3: key = #xaa * 20, msg = #xdd * 50"
             (make-array 20 :element-type '(unsigned-byte 8) :initial-element #xaa)
             (make-array 50 :element-type '(unsigned-byte 8) :initial-element #xdd)))
 

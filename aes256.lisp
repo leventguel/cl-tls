@@ -1,5 +1,5 @@
 (defpackage :tls-aes256
-  (:use :cl :tls-aes-utils)
+  (:use :cl :shared-utils :tls-aes-utils)
   (:export :expand-key-256 :aes256-ecb-encrypt-block :aes256-ecb-encrypt :aes256-ecb-decrypt-block :aes256-ecb-decrypt
            :aes256-cbc-encrypt :aes256-cbc-decrypt :aes256-ctr-encrypt :aes256-ctr-decrypt :aes256-ofb-encrypt
            :aes256-ofb-decrypt :aes256-cfb-xcrypt :aes256-cfb-encrypt :aes256-cfb-decrypt :aes256-cfb8-xcrypt
@@ -719,10 +719,10 @@ Each block is padded by aes256-ecb-encrypt-block if needed."
         (setf counter (increment-counter counter))))
     output))
 
-(defun aes256-ctr-encrypt (plaintext key iv &optional (validate nil))
+(defun aes256-ctr-encrypt (plaintext key iv)
   (aes256-ctr-xcrypt plaintext key iv))
 
-(defun aes256-ctr-decrypt (ciphertext key iv &optional (validate nil))
+(defun aes256-ctr-decrypt (ciphertext key iv)
   (aes256-ctr-xcrypt ciphertext key iv))
 
 (defun aes256-ofb-xcrypt (input key iv &optional (block-size 16))

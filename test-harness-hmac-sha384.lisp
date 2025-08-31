@@ -1,38 +1,11 @@
+(in-package :hmac-sha384)
 ;; test-harness-hmac-sha384.lisp
 
-(ql:quickload :ironclad)
-
+(load "~/clocc/src/ssl/sha-utils.lisp")
 (load "~/clocc/src/ssl/hmac-sha384.lisp") ; Adjust path if needed
 
-(defun ironclad-hmac-sha384 (key message)
-  (let* ((block-size 128)
-         (key (if (> (length key) block-size)
-                  (ironclad:digest-sequence :sha384 key)
-                  key))
-         (key (concatenate '(vector (unsigned-byte 8))
-                           key
-                           (make-array (- block-size (length key))
-                                       :element-type '(unsigned-byte 8)
-                                       :initial-element 0)))
-         (ipad (make-array block-size :element-type '(unsigned-byte 8)
-                                      :initial-element #x36))
-         (opad (make-array block-size :element-type '(unsigned-byte 8)
-                                      :initial-element #x5c)))
-    (loop for i from 0 below block-size do
-      (setf (aref ipad i) (logxor (aref ipad i) (aref key i))
-            (aref opad i) (logxor (aref opad i) (aref key i))))
-    (ironclad:byte-array-to-hex-string
-     (ironclad:digest-sequence :sha384
-       (concatenate '(vector (unsigned-byte 8))
-                    opad
-                    (words64-vector-to-bytes (ironclad:digest-sequence :sha384
-                      (concatenate '(vector (unsigned-byte 8)) ipad message))))))))
-
 (defun my-hmac-sha384 (key message)
-  (hmac-sha384-hex key message)) ; Your implementation
-
-(defun string-to-bytes (str)
-  (map 'vector #'char-code str))
+  (hmac-sha384-hex key message)) ;; Your implementation
 
 (defun run-test (label key message)
   (let* ((expected (string-downcase (ironclad-hmac-sha384 key message)))

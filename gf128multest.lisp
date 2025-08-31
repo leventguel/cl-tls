@@ -1,33 +1,3 @@
-(defun gf128-mul (x y)
-  (let ((res 0)
-        (R #xE1000000000000000000000000000000)
-        (mask #xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF))
-    (dotimes (i 128)
-      (when (logbitp (- 127 i) y)
-        (setf res (logxor (logand res mask) x)))
-      (setf res (logand res mask)) ;; ✨ constrain res to 128 bits
-      (setf x (if (logbitp 0 x)
-                  (logand (logxor (ash x -1) R) mask)
-                  (logand (ash x -1) mask)))
-      (setf x (logand x mask)))
-    res))
-
-;; Convert 16-byte vector to bignum
-(defun block->int (block)
-  "Converts 128-bit block to bignum."
-  (reduce (lambda (acc byte)
-            (logior (ash acc 8) byte))
-          block
-          :initial-value 0))
-
-;; Convert bignum to 16-byte vector
-(defun int->block (n)
-  "Converts bignum to 128-bit block (vector of bytes)."
-  (let ((vec (make-array 16 :element-type '(unsigned-byte 8))))
-    (dotimes (i 16)
-      (setf (aref vec (- 15 i)) (ldb (byte 8 (* i 8)) n)))
-    vec))
-
 (defun gf128mul-spec (x y)
   (let ((res 0)
         (R #xE1000000000000000000000000000000)
@@ -72,28 +42,6 @@
 	(result (int->block (gf128mul-spec x y))))
     (format t "result   = ~{~2,'0X~}~%" (coerce result 'list))))
 
-(defun gf128-inc32 (x)
-  "Increment the least significant 32 bits of block x"
-  (let ((low32 (ldb (byte 32 0) x))
-        (high96 (ldb (byte 96 32) x)))
-    (setf low32 (mod (+ low32 1) (expt 2 32)))
-    (logior (ash high96 32) low32)))
-
-(defun reverse-128-bit-int (x)
-  (let ((result 0))
-    (dotimes (i 16)
-      (setf result
-            (logior
-             (ash result 8)
-             (ldb (byte 8 (* i 8)) x))))
-    result))
-
-(defun reverse-block (block)
-  (let ((reversed (make-array 16 :element-type '(unsigned-byte 8))))
-    (dotimes (i 16)
-      (setf (aref reversed i) (aref block (- 15 i))))
-    reversed))
-
 (defun gf128mul-ghash (H block)
   (let ((res 0)
         (R #xE1000000000000000000000000000000)
@@ -107,18 +55,6 @@
                   (logand (ash H -1) mask)))
       (setf H (logand H mask)))
     res))
-
-(defun byte->bits (byte)
-  (loop for i from 7 downto 0 collect (ldb (byte 1 i) byte)))
-
-(defun block->bitlist (block)
-  ;; Accepts a vector of 16 bytes and returns 128 bits as a vector
-  (let ((bitlist (make-array 128 :element-type '(unsigned-byte 1))))
-    (loop for i from 0 below 16 do
-      (loop for j from 0 below 8 do
-        (setf (aref bitlist (+ (* i 8) j))
-              (ldb (byte 1 (- 7 j)) (aref block i)))))
-    bitlist))
 
 (defun test-gf128mul-ghash1 ()
   (let* ((H #x00000000000000000000000000000001)

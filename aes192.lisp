@@ -1,5 +1,5 @@
 (defpackage :tls-aes192
-  (:use :cl :tls-aes-utils)
+  (:use :cl :shared-utils :tls-aes-utils)
   (:export :expand-key-192 :aes192-ecb-encrypt-block :aes192-ecb-encrypt :aes192-ecb-decrypt-block :aes192-ecb-decrypt
            :aes192-cbc-encrypt :aes192-cbc-decrypt :aes192-ctr-encrypt :aes192-ctr-decrypt :aes192-ofb-encrypt
            :aes192-ofb-decrypt :aes192-cfb-xcrypt :aes192-cfb-encrypt :aes192-cfb-decrypt :aes192-cfb8-xcrypt
@@ -733,10 +733,10 @@ Each block is padded by aes192-ecb-encrypt-block if needed."
         (setf counter (increment-counter counter))))
     output))
 
-(defun aes192-ctr-encrypt (plaintext key iv &optional (validate nil))
+(defun aes192-ctr-encrypt (plaintext key iv)
   (aes192-ctr-xcrypt plaintext key iv))
 
-(defun aes192-ctr-decrypt (ciphertext key iv &optional (validate nil))
+(defun aes192-ctr-decrypt (ciphertext key iv)
   (aes192-ctr-xcrypt ciphertext key iv))
 
 (defun aes192-ofb-xcrypt (input key iv &optional (block-size 16))

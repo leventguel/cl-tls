@@ -1,21 +1,5 @@
 (in-package :tls-aes128)
 
-(defun hex-string-to-byte-vector (hex)
-  "Converts a hex string to a vector of unsigned bytes. Ignores whitespace."
-  (let* ((clean (remove-if (lambda (ch) (find ch " \t\n\r")) hex))
-         (n (length clean))
-         (length-bytes (floor n 2))
-         (bytes (make-array length-bytes :element-type '(unsigned-byte 8))))
-    (unless (zerop (mod (length clean) 2))
-      (error "Hex string must contain an even number of characters"))
-    (loop for i from 0 below length-bytes do
-      (setf (aref bytes i)
-            (parse-integer clean :start (* i 2) :end (+ (* i 2) 2) :radix 16)))
-    bytes))
-
-(defun byte-vector-to-hex-string (vec)
-  (format nil "~{~2,'0X~}" (coerce vec 'list)))
-
 (defun inc-counter (block)
   "Increment last 32 bits of 16-byte vector as a big-endian counter."
   (let ((out (copy-seq block)))

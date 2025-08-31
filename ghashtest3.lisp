@@ -1,18 +1,3 @@
-(defun hex->bytes (hex)
-  "Converts hex string to a vector of (unsigned-byte 8)."
-  (let ((len (length hex)))
-    (assert (evenp len))
-    (let ((vec (make-array (/ len 2) :element-type '(unsigned-byte 8))))
-      (loop for i from 0 below len by 2
-            for b = (parse-integer hex :start i :end (+ i 2) :radix 16)
-            for j from 0 do (setf (aref vec j) b))
-      vec)))
-
-(defun bytes->hex (vec)
-  "Converts a vector of unsigned-byte 8 to a hex string."
-  (with-output-to-string (s)
-    (map nil (lambda (b) (format s "~2,'0X" b)) vec)))
-
 (defun block->int (bytes)
   "Convert 16-byte vector to integer (big-endian)."
   (reduce (lambda (acc b) (logior (ash acc 8) b)) bytes :initial-value 0))

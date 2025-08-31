@@ -1,0 +1,5 @@
+(load "hmac-sha1.lisp")
+(load "hmac-sha224.lisp")
+(load "hmac-sha256.lisp")
+(load "hmac-sha384.lisp")
+(load "hmac-sha512.lisp")

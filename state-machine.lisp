@@ -1,7 +1,7 @@
 (load "load-all.lisp")
 
 (defpackage :tls-state-machine
-  (:use :cl :tls-utils :tls-client-hello :tls-server-hello :tls-extensions :tls-records)
+  (:use :cl :shared-utils :tls-client-hello :tls-server-hello :tls-extensions :tls-records)
   (:export :run-handshake :main))
 
 (in-package :tls-state-machine)

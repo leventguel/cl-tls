@@ -1,36 +1,11 @@
-(ql:quickload :ironclad)
+(in-package :hmac-sha224)
+;; test-harness-hmac-sha224.lisp
 
+(load "~/clocc/src/ssl/sha-utils.lisp")
 (load "~/clocc/src/ssl/hmac-sha224.lisp") ; Adjust path if needed
 
-(defun ironclad-hmac-sha224 (key message)
-  (let* ((block-size 64)
-         (key (if (> (length key) block-size)
-                  (ironclad:digest-sequence :sha224 key)
-                  key))
-         (key (concatenate '(vector (unsigned-byte 8))
-                           key
-                           (make-array (- block-size (length key))
-                                       :element-type '(unsigned-byte 8)
-                                       :initial-element 0)))
-         (ipad (make-array block-size :element-type '(unsigned-byte 8)
-                                      :initial-element #x36))
-         (opad (make-array block-size :element-type '(unsigned-byte 8)
-                                      :initial-element #x5c)))
-    (loop for i from 0 below block-size do
-      (setf (aref ipad i) (logxor (aref ipad i) (aref key i))
-            (aref opad i) (logxor (aref opad i) (aref key i))))
-    (ironclad:byte-array-to-hex-string
-     (ironclad:digest-sequence :sha224
-       (concatenate '(vector (unsigned-byte 8))
-                    opad
-                    (ironclad:digest-sequence :sha224
-                      (concatenate '(vector (unsigned-byte 8)) ipad message)))))))
-
 (defun my-hmac-sha224 (key message)
-  (bytes-to-hex (hmac-sha224 key message)))
-
-(defun string-to-bytes (str)
-  (map 'vector #'char-code str))
+  (hmac-sha224-hex key message))
 
 (defun run-test (label key message)
   (let* ((expected (string-downcase (ironclad-hmac-sha224 key message)))

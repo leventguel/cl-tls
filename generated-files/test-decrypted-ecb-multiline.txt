@@ -1,0 +1,4 @@
+Hello File ECB World!
+This is line two.
+Third line with symbols: @#$%^&*()
+日本語の行もテストします。

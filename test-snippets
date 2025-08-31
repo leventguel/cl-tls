@@ -1,0 +1,12 @@
+(format t "Test EK: ~X~%" 
+  (byte-vector-to-hex-string 
+    (aes128-ecb-encrypt
+      (hex-string-to-byte-vector "18930CA7188D1DE8E364300C9E59E500")
+      (expand-key-128 (hex-string-to-byte-vector "16C51C89E38F343068941CEED2B6F62F")) t)))
+
+
+(format t "Test EK: ~X~%"
+  (byte-vector-to-hex-string
+    (aes128-ecb-encrypt
+      (hex-string-to-byte-vector "cb531fac69f77f4e87299c02b9")
+      (hex-string-to-byte-vector "16C51C89E38F343068941CEED2B6F62F") t)))

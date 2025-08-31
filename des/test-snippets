@@ -1,0 +1,528 @@
+(defparameter *key* #(19 52 87 121 155 188 223 241)) ; 8 bytes
+(defparameter *iv*  #(0 0 0 0 0 0 0 0))              ; 8-byte IV (all zeros)
+(defparameter *block* #(72 101 108 108 111 44 32 76)) ; "Hello, L" in ASCII
+
+(let* ((plaintext "Hello, Levent!")
+       (ciphertext (des-api::encrypt-string plaintext *key* *iv*))
+       (blocks (des-utils::split-into-blocks (des-utils::hex-string-to-byte-vector ciphertext) 8))
+       (bit-blocks (mapcar #'des-utils::byte-vector-to-bit-vector blocks))
+       (plain-bit-blocks (des-core::des-cbc-decrypt bit-blocks
+                                          (des-utils::byte-vector-to-bit-vector *key*)
+                                          (des-utils::byte-vector-to-bit-vector *iv*)))
+       (plain-bytes (des-utils::bit-vector-to-byte-vector
+                     (apply #'concatenate 'vector plain-bit-blocks))))
+  (format t "~%Enrypted bytes: ~A~%" ciphertext)
+  (format t "~%Plain bit blocks: ~A~%" plain-bit-blocks)
+  (format t "~%Plain Bytes: ~A~%" plain-bytes)
+  (format t "blah: ~a~%" (mapcar #'des-utils::byte-vector-to-hex-string
+				 (mapcar #'des-utils::bit-vector-to-byte-vector plain-bit-blocks)))
+  (format t "~%Decrypted bytes: ~{~2,'0X~}~%" (coerce plain-bytes 'list))
+  plain-bytes)
+
+(let ((expected (string-to-byte-vector "Hello, Levent!")))
+  (format t "~%Expected unpadded plaintext: ~A~%" expected))
+  
+(let ((expected (pad-blocks (string-to-byte-vector "Hello, Levent!") 8)))
+  (format t "~%Expected padded plaintext: ~A~%" expected))
+
+(let ((expected (pad-blocks (string-to-byte-vector "Hello, Levent!") 8)))
+  (format t "~%Expected unpadded plaintext after unpadding applied: ~A~%" (unpad-byte-vector expected)))
+
+(let ((encrypted (encrypt-string "Hello, Levent!" *key* *iv*)))
+     (format t "Encrypted: ~a~%" encrypted))
+
+(let* ((encrypted (des-api::encrypt-string "Hello, Levent!" *key* *iv*))
+       (decrypted (des-api::decrypt-string encrypted *key* *iv*)))
+     (format t "Encrypted: ~a~%" encrypted)
+     (format t "Decrypted: ~a~%" decrypted))
+
+(let* ((plaintext "Hello, CBC!")
+       (key #(19 52 87 121 155 188 223 241)) ;; 8 bytes
+       (iv #(0 0 0 0 0 0 0 0))              ;; 8 bytes
+       ;; Convert plaintext to padded byte vector
+       (padded-bytes (des-api::pad-byte-vector (des-utils::string-to-byte-vector plaintext) 8))
+       ;; Split into blocks and convert to bits
+       (blocks (des-utils::split-into-blocks padded-bytes 8))
+       ;; Encrypt
+       (cipher-blocks (des-core::des-cbc-encrypt-plain blocks key iv))
+       ;; Decrypt
+       (decrypted-blocks (des-core::des-cbc-decrypt-plain cipher-blocks key iv))
+       ;; Convert decrypted bits back to bytes
+       (decrypted-bytes (apply #'concatenate 'vector
+                               (mapcar #'des-utils::bit-vector-to-byte-vector decrypted-blocks)))
+       (unpadded (des-api::unpad-byte-vector decrypted-bytes))
+       (recovered-message (des-utils::byte-vector-to-string unpadded)))
+  ;; Display results
+  (format t "Original: ~A ~A~%" plaintext (type-of plaintext))
+  (format t "Padded bytes: ~A ~A~%" padded-bytes (type-of padded-bytes))
+  (format t "Split blocks: ~A~%" blocks)
+  (format t "Encrypted blocks: ~A ~A~%" cipher-blocks (mapcar #'type-of cipher-blocks))
+  (format t "Decrypted blocks: ~A ~A~%" decrypted-blocks (mapcar #'type-of decrypted-blocks))
+  (format t "Decrypted bytes: ~A ~A~%" decrypted-bytes (type-of decrypted-bytes))
+  (format t "Unpadded: ~A~%" unpadded)
+  (format t "Original recovered: ~A~%" recovered-message)
+  ;; Check round-trip
+  (equalp (des-utils::string-to-byte-vector plaintext) unpadded))
+
+(let* ((plaintext "Hello, CBC!")
+       (key #(19 52 87 121 155 188 223 241)) ;; 8 bytes
+       (iv #(0 0 0 0 0 0 0 0))              ;; 8 bytes
+       ;; Convert plaintext to padded byte vector
+       (padded-plain-bytes (des-api::pad-byte-vector (des-utils::string-to-byte-vector plaintext) 8))
+       ;; Split into blocks and convert to bits
+       (blocks (des-utils::split-into-blocks padded-plain-bytes 8))
+       ;; Encrypt
+       (cipher-blocks (des-core::des-cbc-encrypt blocks key iv))
+       (decrypted-blocks (des-core::des-cbc-decrypt cipher-blocks key iv)))
+  (print padded-plain-bytes)
+  (print blocks)
+  ;;(print (apply #'concatenate 'vector blocks))
+  ;;(print (mapcar #'des-utils::bit-vector-to-byte-vector cipher-blocks))
+  (mapcar #'des-utils::bit-vector-to-byte-vector decrypted-blocks))
+
+(let* ((plaintext "Hello, CBC!")
+       (key #(19 52 87 121 155 188 223 241)) ;; 8 bytes
+       (iv #(0 0 0 0 0 0 0 0))              ;; 8 bytes
+       ;; Convert plaintext to padded byte vector
+       (padded-plain-bytes (des-api::pad-byte-vector (des-utils::string-to-byte-vector plaintext) 8))
+       ;; Split into blocks and convert to bits
+       (blocks (des-utils::split-into-blocks padded-plain-bytes 8))
+       ;; Encrypt
+       (cipher-blocks (des-core::des-cbc-encrypt blocks key iv))
+       (decrypted-blocks (des-core::des-cbc-decrypt cipher-blocks key iv)))
+  (let ((C₁ (second cipher-blocks))
+	(C₀ (first cipher-blocks))
+	(round-keys (des-core::generate-round-keys key nil)))
+    (let ((D₁ (des-core::des-decrypt-block C₁ round-keys)))
+      (format t "D(C₁): ~A~%" D₁)
+      (format t "C₀: ~A~%" C₀)
+      (let ((P₁ (map 'vector #'logxor D₁ C₀)))
+	(format t "Recovered P₁: ~A~%" (des-utils::bit-vector-to-byte-vector P₁))))))
+
+(let* ((plaintext "Hello, CBC!")
+       (key #(19 52 87 121 155 188 223 241)) ;; 8 bytes
+       (iv #(0 0 0 0 0 0 0 0))              ;; 8 bytes
+       ;; Convert plaintext to padded byte vector
+       (padded-bytes (des-api::pad-byte-vector (des-utils::string-to-byte-vector plaintext) 8))
+       ;; Split into blocks and convert to bits
+       (blocks (des-utils::split-into-blocks padded-bytes 8))
+       ;; Encrypt
+       (cipher-blocks (des-core::des-cbc-encrypt blocks key iv)))
+  (apply #'concatenate 'vector (mapcar #'des-utils::bit-vector-to-byte-vector
+				       (des-core::des-cbc-decrypt
+					(mapcar #'des-utils::bit-vector-to-byte-vector cipher-blocks)
+					key iv))))
+
+(des-core::des-cbc-decrypt (mapcar #'des-utils::byte-vector-to-bit-vector
+(des-utils::split-into-blocks
+(des-utils::hex-string-to-byte-vector
+ (des-api::encrypt-string "Hello, Levent!" *key* *iv*))
+8))
+(des-utils::byte-vector-to-bit-vector *key*)
+(des-utils::byte-vector-to-bit-vector *iv*))
+
+(defparameter *key* #(19 52 87 121 155 188 223 241)) ; 8-byte key
+(defparameter *iv*  #(0 0 0 0 0 0 0 0))              ; 8-byte IV (all zeros)
+(defparameter *plaintext-blocks*
+  (list
+   #(72 101 108 108 111 44 32 76)   ; "Hello, L"
+   #(105 115 32 103 114 101 97 116))) ; "is great"
+
+(let* ((bit-key (des-utils::byte-vector-to-bit-vector *key*))
+       (cipher-blocks (des-core::des-cbc-encrypt *plaintext-blocks* bit-key *iv*))
+       (cipher-bytes (mapcar #'des-utils::bit-vector-to-byte-vector cipher-blocks))
+       (decrypted-blocks (des-core::des-cbc-decrypt cipher-blocks bit-key *iv*))
+       (decrypted-bytes (mapcar #'des-utils::bit-vector-to-byte-vector decrypted-blocks)))
+  (format t "~%Original blocks:")
+  (dolist (b *plaintext-blocks*) (format t "~%  ~A" b))
+  (format t "~%~%Encrypted blocks:")
+  (dolist (b cipher-bytes) (format t "~%  ~A" b))
+  (format t "~%~%Decrypted blocks:")
+  (dolist (b decrypted-bytes) (format t "~%  ~A" b))
+  (equalp *plaintext-blocks* decrypted-bytes))
+
+(let ((original #(72 101 108 108 111 44 32 76)))
+  (equal original
+         (bit-vector-to-byte-vector
+          (byte-vector-to-bit-vector original))))
+
+(defun byte-to-bits (byte)
+  (let ((bits (make-array 8 :element-type 'fixnum)))
+    (dotimes (j 8)
+      (setf (aref bits j)
+            (if (logbitp (- 7 j) byte) 1 0)))
+    bits))
+
+(defun bits-to-byte (bits)
+  (let ((byte 0))
+    (dotimes (j 8)
+      (setf byte
+            (logior byte
+                    (ash (aref bits j) (- 7 j)))))
+    byte))
+
+;; original is a vector of bytes
+(let ((original #(72 101 108 108 111 44 32 76)))
+  (format t "~a~%" (map 'vector (lambda (b) (byte-to-bits b)) original))
+  (format t "~a~%" (map 'vector (lambda (b) (bits-to-byte (byte-to-bits b))) original)))
+
+(let ((num 13200))
+  (format t "~a~%" (byte-to-bits num))
+  (format t "~a~%" (map 'vector (lambda (b) (bits-to-byte (byte-to-bits b))) (list num))))
+
+(let ((original #(72 101 108 108 111 44 32 76)))
+  (equal original
+         (map 'vector
+              (lambda (b)
+                (bits-to-byte (byte-to-bits b)))
+              original)))
+
+(let ((original #(72 101 108 108 111 44 32 76)))
+  (equalp original
+         (map 'vector
+              (lambda (b)
+                (bits-to-byte (byte-to-bits b)))
+              original)))
+
+(let ((original #(72 101 108 108 111 44 32 76)))
+  (map 'vector
+       (lambda (b)
+         (let ((bits (byte-to-bits b))
+               (reconstructed (bits-to-byte (byte-to-bits b))))
+           (format t "~a → ~a → ~a~%" b bits reconstructed)
+           reconstructed))
+       original))
+
+(defun byte-vector-to-bit-vector (bytes)
+  (apply #'concatenate 'vector
+         (map 'list #'byte-to-bits bytes)))
+
+(defun bit-vector-to-byte-vector (bits)
+  (let ((n (/ (length bits) 8)))
+    (make-array n
+                :element-type '(unsigned-byte 8)
+                :initial-contents
+                (loop for i from 0 below n
+                      collect (bits-to-byte
+                               (subseq bits (* i 8) (* (1+ i) 8)))))))
+
+(let ((original #(72 101 108 108 111 44 32 76)))
+  (equalp original
+          (bit-vector-to-byte-vector
+           (byte-vector-to-bit-vector original))))
+
+(defun valid-bit-vector-p (vec)
+  (and (vectorp vec)
+       (= (length vec) 8)
+       (every (lambda (x) (or (eql x 0) (eql x 1))) vec)))
+
+(let* ((original #(72 101 108 108 111 44 32 76))
+       (bits (des-utils:byte-vector-to-bit-vector original))
+       (roundtrip (des-utils:bit-vector-to-byte-vector bits)))
+  (mapcar #'length (map 'vector #'byte-vector-to-bit-vector round-keys))
+  (equalp original roundtrip))
+
+(let ((key #(1 2 3 4 5 6 7 8)))
+  (let ((round-keys (des-core:generate-round-keys key)))
+    (mapcar #'length
+            (map 'vector #'des-utils:byte-vector-to-bit-vector round-keys))))
+
+(let* ((block #(72 101 108 108 111 44 32 76))
+       (key #(1 2 3 4 5 6 7 8))
+       (round-keys (des-core:generate-round-keys key))
+       (encrypted (des-core:des-encrypt-block block round-keys))
+       (decrypted-bits (des-core:des-decrypt-block encrypted round-keys))
+       (decrypted (des-utils:bit-vector-to-byte-vector decrypted-bits)))
+  (format t "Original: ~A~%" block)
+  (format t "Encrypted: ~A~%" encrypted)
+  (format t "Decrypted: ~A~%" decrypted)
+  (equalp block decrypted))
+
+(let* ((block #(72 101 108 108 111 44 32 76))
+       (key #(1 2 3 4 5 6 7 8))
+       (round-keys (des-core:generate-round-keys key))
+       (encrypted (des-core:des-encrypt-block block round-keys))
+       (decrypted-bits (des-core:des-decrypt-block encrypted round-keys))
+       (decrypted (des-utils:bit-vector-to-byte-vector decrypted-bits)))
+  (format t "Original: ~A~%" block)
+  (format t "Encrypted: ~A~%" encrypted)
+  (format t "Decrypted: ~A~%" decrypted)
+  (equalp block decrypted)
+  (equalp
+   (des-core:des-encrypt-block block round-keys)
+   (des-core:des-decrypt-block
+    (des-core:des-encrypt-block block round-keys)
+    (reverse round-keys))))
+
+(load "des-core.lisp")
+(load "des-api.lisp")
+(let* ((plaintext #(1 35 69 103 137 171 205 239))  ;; 0x0123456789ABCDEF
+       (key #(19 52 87 121 155 188 223 241))       ;; 0x133457799BBCDFF1
+       (round-keys (des-core::generate-round-keys key nil))
+       (encrypted (des-core::des-encrypt-block plaintext round-keys))
+       (decrypted-bits (des-core::des-decrypt-block encrypted round-keys))
+       (decrypted (des-utils::bit-vector-to-byte-vector decrypted-bits)))
+  (format t "Plaintext: ~A~%" plaintext)
+  (format t "Encrypted: ~A~%" encrypted)
+  (format t "Decrypted: ~A~%" decrypted)
+  (equalp plaintext decrypted))
+
+(load "des-core.lisp")
+(load "des-api.lisp")
+(let* ((plaintext #(1 35 69 103 137 171 205 239))  ;; 0x0123456789ABCDEF
+       (key #(19 52 87 121 155 188 223 241))       ;; 0x133457799BBCDFF1
+       (round-keys (des-core::generate-round-keys key nil))
+       (encrypted (des-core::des-encrypt-block plaintext round-keys))
+       (decrypted (des-utils::bit-vector-to-byte-vector (des-core::des-decrypt-block plaintext round-keys))))
+  (format t "Plaintext: ~A~%" plaintext)
+  (format t "Encrypted: ~A~%" encrypted)
+  (format t "Decrypted: ~A~%" decrypted)
+  (equalp plaintext decrypted))
+
+(load "des-core.lisp")
+(load "des-api.lisp")
+(let* ((plaintext #(1 35 69 103 137 171 205 239))  ;; 0x0123456789ABCDEF
+       (key #(19 52 87 121 155 188 223 241))       ;; 0x133457799BBCDFF1
+       (round-keys (des-core::generate-round-keys key nil)))
+  (format t "Plaintext bits before encryption: ~A~%" (des-utils::byte-vector-to-bit-vector plaintext))
+  (let* ((encrypted (des-core::des-encrypt-block plaintext round-keys))
+	(decrypted-bit-vector (des-core::des-decrypt-block encrypted round-keys)))
+    (format t "Decrypted bit vector length: ~A~%" (length decrypted-bit-vector))
+    (format t "Decrypted bits: ~A~%" decrypted-bit-vector)
+    (format t "Plaintext bits after decryption: ~A~%" (des-utils::byte-vector-to-bit-vector plaintext))    
+    (let ((decrypted (des-utils::bit-vector-to-byte-vector decrypted-bit-vector)))
+      (format t "Decrypted vector length: ~A~%" (length decrypted))
+      (format t "Plaintext: ~A~%" plaintext)
+      (format t "Encrypted: ~A~%" encrypted)
+      (format t "Decrypted: ~A~%" decrypted)
+      (equalp plaintext decrypted))))
+
+(let* ((plaintext #(1 35 69 103 137 171 205 239))  ;; 0x0123456789ABCDEF
+       (key #(19 52 87 121 155 188 223 241))       ;; 0x133457799BBCDFF1
+       (round-keys (des-core::generate-round-keys key))
+       (encrypted (des-core::des-encrypt-block plaintext round-keys)))
+  (format t "Plaintext: ~A~%" plaintext)
+  (format t "Encrypted: ~A~%" encrypted))
+
+(let* ((plaintext #(1 35 69 103 137 171 205 239))  ;; 0x0123456789ABCDEF
+       (key #(19 52 87 121 155 188 223 241))       ;; 0x133457799BBCDFF1
+       (round-keys (des-core::generate-round-keys key))
+       (encrypted (des-core::des-encrypt-block plaintext round-keys))
+       (decrypted-bits (des-core::des-decrypt-block encrypted round-keys))
+       (decrypted (des-utils::bit-vector-to-byte-vector decrypted-bits)))
+  (format t "Decrypted: ~A~%" decrypted))
+
+(let* ((bytes #(1 35 69 103 137 171 205 239))
+       (bits (des-utils::byte-vector-to-bit-vector bytes))
+       (recovered (des-utils::bit-vector-to-byte-vector bits)))
+  (equalp bytes recovered))  ;; Should be T
+
+(let* ((plaintext "Hello, CBC!")
+       (key #(19 52 87 121 155 188 223 241))
+       (iv #(0 0 0 0 0 0 0 0))
+       (bytes (des-utils::string-to-byte-vector plaintext))
+       (cipher-blocks (des-core::des-cbc-encrypt bytes key iv))
+       (encrypted-string (des-api::encrypt-string plaintext key iv))
+       (decrypted-string (des-api::decrypt-string encrypted-string key iv)))
+  (declare (ignore cipher-blocks))
+  (print (des-core::des-cbc-decrypt encrypted-string key iv))
+   decrypted-string)
+
+(let* ((key #(1 2 3 4 5 6 7 8))
+       (iv  #(0 0 0 0 0 0 0 0))
+       (plaintext "Hello Base64 World!")
+       (cipher-bytes (des-api::encrypt-bytes-cbc
+		      (des-utils::string-to-byte-vector plaintext)
+		      (des-utils::ensure-bit-vector key)
+		      (des-utils::ensure-bit-vector iv)))
+       (b64 (des-base64::base64-encode (apply #'concatenate 'vector cipher-bytes)))
+       (decoded (des-base64::base64-decode b64)))
+  (format t "Original cipher-bytes: ~A~%" cipher-bytes)
+  (format t "Decoded from Base64:   ~A~%" decoded)
+  (equalp (apply #'concatenate 'vector cipher-bytes) decoded))
+
+(let* ((bytes #(1 2 3 4 5 6 7 8 9 10))
+       (b64 (des-base64::base64-encode bytes))
+       (decoded (des-base64::base64-decode b64)))
+  (format t "Original: ~A~%" bytes)
+  (format t "Decoded:  ~A~%" decoded)
+  (equalp bytes decoded))
+
+(defun test-cfb-mode ()
+  (let* ((key #(49 50 51 52 53 54 55 56)) ; "12345678"
+         (iv  #(97 98 99 100 101 102 103 104)) ; "abcdefgh"
+         (plaintext (map 'vector #'char-code "The quick brown fox jumps over the lazy dog"))
+         (ciphertext (cfb-encrypt-plain plaintext key iv))
+         (decrypted (cfb-decrypt-plain ciphertext key iv)))
+    (format t "Plaintext: ~A~%" (map 'string #'code-char plaintext))
+    (format t "Ciphertext (hex): ~{~2,'0X~}~%" (coerce (apply #'concatenate 'vector ciphertext) 'list)) ;; flatten and list
+    (format t "Decrypted: ~A~%" (map 'string #'code-char decrypted))
+    (equalp (coerce plaintext 'vector)
+            (coerce decrypted 'vector))))
+
+(defun triple-des-cbc-encrypt (plaintext key1 key2 key3 iv)
+  "Encrypt plaintext using Triple DES in CBC mode with existing DES primitives."
+  (let* ((padded (pad-byte-vector (string-to-byte-vector plaintext) 8))
+         (blocks (split-into-blocks padded 8))
+         (previous-block (ensure-bit-vector iv))
+         result)
+    (dolist (block blocks)
+      (let* ((block (ensure-bit-vector block))
+             ;; CBC XOR step
+	     (xored (map 'bit-vector #'logxor block previous-block))
+             ;; Triple DES encryption: E_k3(D_k2(E_k1(xored)))
+	     (step1 (des-ecb-encrypt-block xored (generate-round-keys (ensure-bit-vector key1) t)))
+             (step2 (des-ecb-decrypt-block step1 (generate-round-keys (ensure-bit-vector key2) t)))
+             (cipher-block (des-ecb-encrypt-block step2 (generate-round-keys (ensure-bit-vector key3) t))))
+        (push cipher-block result)
+        (setf previous-block cipher-block)))
+    ;; Convert bit-vectors to byte-vectors and flatten
+    (apply #'concatenate 'vector
+           (mapcar #'bit-vector-to-byte-vector (nreverse result)))))
+
+(defun triple-des-cbc-decrypt (ciphertext key1 key2 key3 iv)
+  "Decrypt ciphertext using Triple DES in CBC mode with existing DES primitives."
+  (let* ((blocks (split-into-blocks ciphertext 8))
+         (previous-block (ensure-bit-vector iv))
+         result)
+    (dolist (block blocks)
+      (let* ((block (ensure-bit-vector block))
+             ;; Triple DES decryption: D_k1(E_k2(D_k3(block)))
+	     (step1 (des-ecb-decrypt-block block (generate-round-keys (ensure-bit-vector key3) t)))
+             (step2 (des-ecb-encrypt-block step1 (generate-round-keys (ensure-bit-vector key2) t)))
+             (plaintext (des-ecb-decrypt-block step2 (generate-round-keys (ensure-bit-vector key1) t)))
+             ;; CBC XOR step
+	     (xored (map 'bit-vector #'logxor plaintext previous-block)))
+        (push xored result)
+        (setf previous-block block)))
+    ;; Convert bit-vectors to byte-vectors and unpad
+    (unpad-byte-vector
+     (apply #'concatenate 'vector
+            (mapcar #'bit-vector-to-byte-vector (nreverse result))))))
+
+(let* ((key1 "dc047368023252d9")
+       (key2 "0ebccdc21661e3ab")
+       (key3 "dc047368023252d9")
+       (key
+	(concatenate 'vector
+		     (shared-utils::hex-string-to-byte-vector key1)
+		     (shared-utils::hex-string-to-byte-vector key2)))
+       (ddes-keys (des-double-cmac::prepare-ddes-keys key))
+       (zero-block (make-array 8 :element-type '(unsigned-byte 8) :initial-element 0))
+       (L (des-double-cmac::ddes-ecb-encrypt-block zero-block ddes-keys)))
+  (declare (ignore key3))
+  (format t "L: ~A~%" (des-utils::bit-vector-to-byte-vector L))
+  (multiple-value-bind (K1 K2) (des-double-cmac::generate-subkeys-ddes key)
+    (list key (length key) ddes-keys (type-of ddes-keys) K1 K2 (des-double-cmac::pad-block #())
+	  (shared-utils::xor-blocks #(128 0 0 0 0 0 0 0) K2)
+	   (des-utils::bit-vector-to-byte-vector
+	    (des-double-cmac::ddes-ecb-encrypt-block #(0 0 0 0 0 0 0 0) ddes-keys)))))
+
+(let ((zero-block (make-array 8 :element-type '(unsigned-byte 8) :initial-element 0)))
+  (let ((L (des-double-cmac::ddes-ecb-encrypt-block zero-block (des-double-cmac::prepare-ddes-keys key))))
+    (format t "L: ~A~%" L)))
+
+
+(let ((Key1 "fb37a84a2c1fb60d")
+      (Key2 "d35d61ea377f5726")
+      (Key3 "fb37a84a2c1fb60d"))
+  (setf key
+	(concatenate 'vector
+		     (shared-utils::hex-string-to-byte-vector key1)
+		     (shared-utils::hex-string-to-byte-vector key2)
+		     (shared-utils::hex-string-to-byte-vector key3)))
+  (multiple-value-bind (K1 K2) (generate-subkeys key)
+    key))
+  
+(defun test-cmac-subkey-shift ()
+  (let* ((input #(#x86 #xA9 #xD6 #x1C #xE2 #xDD #xC7 #x20)) ; example L
+         (expected-k1 #(#x0D #x53 #xAC #x39 #xC5 #xBB #x8E #x5B)) ; expected K1
+         (actual-k1 (des-double-cmac::cmac-subkey-shift input)))
+    (format t "Input L:      ~A~%" input)
+    (format t "Expected K1:  ~A~%" expected-k1)
+    (format t "Actual K1:    ~A~%" actual-k1)
+    (if (equalp actual-k1 expected-k1)
+        (format t "✅ cmac-subkey-shift passed~%")
+        (format t "❌ cmac-subkey-shift failed~%"))))
+
+(defun trace-ddes-cmac-case (key1-hex key2-hex key3-hex msg-hex expected-mac-hex tlen)
+  (let* ((key1 (shared-utils::hex-string-to-byte-vector key1-hex))
+         (key2 (shared-utils::hex-string-to-byte-vector key2-hex))
+         (key (concatenate 'vector key1 key2 key1))
+         (msg (shared-utils::hex-string-to-byte-vector msg-hex))
+         (expected-mac (shared-utils::hex-string-to-byte-vector expected-mac-hex))
+         (ddes-keys (des-double-cmac::prepare-ddes-keys key))
+         (zero-block (make-array 8 :element-type '(unsigned-byte 8) :initial-element 0))
+         (L (des-double-cmac::ddes-ecb-encrypt-block zero-block ddes-keys)))
+    (multiple-value-bind (K1 K2) (des-double-cmac::generate-subkeys-ddes key)
+      (format t "~%🔍 L (E(K, 0)): ~A" (des-utils::bit-vector-to-byte-vector L))
+      (format t "~%🔑 K1: ~A" K1)
+      (format t "~%🔑 K2: ~A" K2)
+      (let* ((blocks (des-double-cmac::split-into-blocks msg 8))
+             (last-block (if (= (mod (length msg) 8) 0)
+                             (shared-utils::xor-blocks (car (last blocks)) K1)
+                             (shared-utils::xor-blocks
+                              (des-double-cmac::pad-block (car (last blocks))) K2)))
+             (all-blocks (append (butlast blocks) (list last-block)))
+             (mac (reduce (lambda (acc block)
+                            (des-double-cmac::ddes-ecb-encrypt-block
+                             (shared-utils::xor-blocks acc block)
+                             ddes-keys))
+                          all-blocks
+                          :initial-value zero-block))
+             (truncated (subseq (des-utils::bit-vector-to-byte-vector mac) 0 tlen)))
+        (format t "~%📦 Message blocks: ~A" blocks)
+        (format t "~%📦 Final block after XOR: ~A" last-block)
+        (format t "~%🔐 Raw MAC: ~A" mac)
+        (format t "~%✂️ Truncated MAC: ~A" truncated)
+        (format t "~%🎯 Expected MAC: ~A" expected-mac)
+        (if (equalp truncated expected-mac)
+            (format t "~%✅ Test passed~%")
+            (format t "~%❌ Test failed~%"))))))
+
+(trace-ddes-cmac-case
+ "dc047368023252d9"
+ "0ebccdc21661e3ab"
+ "dc047368023252d9"
+ "eb61c284fe009921039ef6a9ce50e702"
+ "50478569d11ada"
+ 7)
+
+(defun test-bit-vector-to-byte-vector ()
+  (let* ((bits #*10101000  ; binary for 0xA8
+         )
+         (expected #(168)) ; 0xA8 = 168
+         (actual (des-utils::bit-vector-to-byte-vector bits)))
+    (format t "Bits:     ~A~%" bits)
+    (format t "Expected: ~A~%" expected)
+    (format t "Actual:   ~A~%" actual)
+    (if (equalp actual expected)
+        (format t "✅ bit-vector-to-byte-vector passed~%")
+        (format t "❌ bit-vector-to-byte-vector failed~%"))))
+
+(let* ((bits #*000000010000001000000011)
+       (expected #(1 2 3))
+       (actual (des-utils::bit-vector-to-byte-vector bits)))
+  (equalp actual expected)) ;; should return T
+
+(let* ((key1 "dc047368023252d9")
+      (key2 "0ebccdc21661e3ab")
+      (key3 "dc047368023252d9")
+      (key
+       (concatenate 'vector
+		    (shared-utils::hex-string-to-byte-vector key1)
+		    (shared-utils::hex-string-to-byte-vector key2)
+		    (shared-utils::hex-string-to-byte-vector key3)))
+       (ddes-keys (des-double-cmac::prepare-ddes-keys key))
+       (zero-block (make-array 8 :element-type '(unsigned-byte 8) :initial-element 0))
+       (L (des-double-cmac::ddes-ecb-encrypt-block zero-block ddes-keys)))
+  (format t "~A~%" (type-of (aref (aref ddes-keys 0) 0)))
+  (format t "~A~%" (length (aref ddes-keys 0)))
+  (format t "L type: ~A~%" (type-of L))
+  (format t "L length: ~A~%" (length L)))
+
+(let* ((key "0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF")
+       (msg #(0 0 0 0 0 0 0 0)) ; one full block
+       (mac (des-double-cmac::compute-cmac msg key))
+
+  (format t "CMAC: ~A~%" (shared-utils::byte-vector-to-hex-string mac)))

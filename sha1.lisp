@@ -1,34 +1,16 @@
 (defpackage :sha1
-  (:use :cl :tls-utils)
+  (:use :cl :shared-utils :sha-utils)
   (:export :sha1 :sha1-hex))
 
 (in-package :sha1)
 
-(defun rotr32 (x n)
-  (mod (logior (ash x (- n))
-               (ash x (- 32 n)))
-       #x100000000))
-
-(defun rotl32 (x n)
-  (mod (logior (ash x n)
-               (ash x (- n 32)))
-       #x100000000))
-
-(defun shr32 (x n)
-  (mod (ash x (- n)) #x100000000))
-
-(defun ch (x y z) (logxor (logand x y) (logand (lognot x) z)))
-(defun maj (x y z) (logxor (logand x y) (logand x z) (logand y z)))
 (defun sigma0 (x) (logxor (rotl32 x 2) (rotl32 x 13) (rotl32 x 22)))
 (defun sigma1 (x) (logxor (rotl32 x 6) (rotl32 x 11) (rotl32 x 25)))
 (defun gamma0 (x) (logxor (rotl32 x 7) (rotl32 x 18) (shr32 x 3)))
 (defun gamma1 (x) (logxor (rotl32 x 17) (rotl32 x 19) (shr32 x 10)))
 
-(defparameter +h0-160+
-  #( #x67452301 #xefcdab89 #x98badcfe #x10325476 #xc3d2e1f0 ))
-
-(defparameter +k-sha1+
-  #( #x5a827999 #x6ed9eba1 #x8f1bbcdc #xca62c1d6 ))
+(defparameter +h0-160+ #(#x67452301 #xefcdab89 #x98badcfe #x10325476 #xc3d2e1f0))
+(defparameter +k-sha1+ #(#x5a827999 #x6ed9eba1 #x8f1bbcdc #xca62c1d6))
 
 (defun sha1-pad (message)
   (let* ((ml (* (length message) 8)) ; message length in bits
@@ -107,6 +89,9 @@
        (loop for word across digest
              do (loop for shift from 24 downto 0 by 8
                       do (format s "~2,'0X" (ldb (byte 8 shift) word))))))))
+
+(defun sha1-bytes (message) (words-to-bytes (sha1 message)))
+(defun sha1-digest-hex (message) (bytes-to-hex (sha1-bytes message)))
 
 (format t "~a~%" (sha1-hex (map 'vector #'char-code "abc")))
 ;; Should return: a9993e364706816aba3e25717850c26c9cd0d89d
