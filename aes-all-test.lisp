@@ -24,7 +24,7 @@
 
 (defpackage :tls-aes-all-test
   (:use :cl :parse-utils :shared-utils :des-utils :tls-aes-utils :tls-aes128 :tls-aes192 :tls-aes256 :tls-aes-ghash :tls-aes128-gcm :tls-aes192-gcm :tls-aes256-gcm :tls-aes-rsp128-parser :tls-aes-rsp192-parser :tls-aes-rsp256-parser
-	:aes128rsp-test :aes192rsp-test :aes256rsp-test :des-mac-parser :des-mac-test))
+	:aes128rsp-test :aes192rsp-test :aes256rsp-test :des-test :des-mac-parser :des-mac-test))
 
 (in-package :tls-aes-all-test)
 
@@ -139,3 +139,23 @@
 
 (defun test-tdes-cmac-ver (&optional verbose-p (show-msg-len 120) show-pass-fail)
   (test-tdes-cmac-rsp-verify    "rsp/cmac/CMACVerTDES3.rsp" verbose-p show-msg-len show-pass-fail))
+
+(defun test-all ()
+  (test-128)
+  (test-128gcm)
+  (test-128gcm-dec)
+  (test-128cmac)
+  (test-192)
+  (test-192gcm)
+  (test-192gcm-dec)
+  (test-192cmac)
+  (test-256)
+  (test-256gcm)
+  (test-256gcm-dec)
+  (test-256cmac)
+  (test-ddes-cmac)
+  (test-ddes-cmac-ver)
+  (test-tdes-cmac)
+  (test-tdes-cmac-ver)
+  (run-all-des-tests))
+;; run like tls-aes-all-test::test-all if you want all tests
