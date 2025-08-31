@@ -59,20 +59,6 @@
   (test-aes128-cmac-rsp           "rsp/cmac/CMACGenAES128.rsp")
   (test-aes128-cmac-rsp-verify    "rsp/cmac/CMACVerAES128.rsp"))
 
-(defun test-ddes-cmac (&optional verbose-p)
-  "tests the CMAC MODES for aes128"
-  (test-ddes-cmac-rsp           "rsp/cmac/CMACGenTDES2.rsp" verbose-p))
-
-(defun test-ddes-cmac-ver (&optional verbose-p (show-msg-len 120) show-pass-fail)
-  (test-ddes-cmac-rsp-verify    "rsp/cmac/CMACVerTDES2.rsp" verbose-p show-msg-len show-pass-fail))
-
-(defun test-tdes-cmac (&optional verbose-p)
-  "tests the CMAC MODES for aes128"
-  (test-tdes-cmac-rsp           "rsp/cmac/CMACGenTDES3.rsp" verbose-p))
-
-(defun test-tdes-cmac-ver (&optional verbose-p (show-msg-len 120) show-pass-fail)
-  (test-tdes-cmac-rsp-verify    "rsp/cmac/CMACVerTDES3.rsp" verbose-p show-msg-len show-pass-fail))
-
 ;; use like (tls-aes-all-test::test128)
 
 (defun test-192 ()
@@ -139,3 +125,17 @@
   (test-aes256-cmac-rsp-verify    "rsp/cmac/CMACVerAES256.rsp"))
 
 ;; use like (tls-aes-all-test::test256)
+;; DDES and TDES tests
+(defun test-ddes-cmac (&optional verbose-p)
+  "tests the CMAC MODES for aes128"
+  (test-ddes-cmac-rsp           "rsp/cmac/CMACGenTDES2.rsp" verbose-p))
+
+(defun test-ddes-cmac-ver (&optional verbose-p (show-msg-len 120) show-pass-fail)
+  (test-ddes-cmac-rsp-verify    "rsp/cmac/CMACVerTDES2.rsp" verbose-p show-msg-len show-pass-fail))
+
+(defun test-tdes-cmac (&optional verbose-p)
+  "tests the CMAC MODES for aes128"
+  (test-tdes-cmac-rsp           "rsp/cmac/CMACGenTDES3.rsp" verbose-p))
+
+(defun test-tdes-cmac-ver (&optional verbose-p (show-msg-len 120) show-pass-fail)
+  (test-tdes-cmac-rsp-verify    "rsp/cmac/CMACVerTDES3.rsp" verbose-p show-msg-len show-pass-fail))
