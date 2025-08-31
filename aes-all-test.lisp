@@ -1,5 +1,9 @@
 (load "shared-utils.lisp")
 (load "aes-utils.lisp")
+(load "sha.lisp")
+(load "hmac-sha.lisp")
+(load "test-harness-sha.lisp")
+(load "test-harness-hmac-sha.lisp")
 (load "gf128mul.lisp")
 (load "ghash.lisp")
 (load "aes128.lisp")
@@ -23,8 +27,7 @@
 (load "rsp/test-des-mac.lisp")
 
 (defpackage :tls-aes-all-test
-  (:use :cl :parse-utils :shared-utils :des-utils :tls-aes-utils :tls-aes128 :tls-aes192 :tls-aes256 :tls-aes-ghash :tls-aes128-gcm :tls-aes192-gcm :tls-aes256-gcm :tls-aes-rsp128-parser :tls-aes-rsp192-parser :tls-aes-rsp256-parser
-	:aes128rsp-test :aes192rsp-test :aes256rsp-test :des-test :des-mac-parser :des-mac-test))
+  (:use :cl :parse-utils :shared-utils :des-utils :tls-aes-utils :sha-utils :sha1 :sha224 :sha256 :sha384 :sha512 :tls-aes128 :tls-aes192 :tls-aes256 :tls-aes-ghash :tls-aes128-gcm :tls-aes192-gcm :tls-aes256-gcm :tls-aes-rsp128-parser :tls-aes-rsp192-parser :tls-aes-rsp256-parser :aes128rsp-test :aes192rsp-test :aes256rsp-test :des-test :des-mac-parser :des-mac-test))
 
 (in-package :tls-aes-all-test)
 
@@ -157,5 +160,15 @@
   (test-ddes-cmac-ver)
   (test-tdes-cmac)
   (test-tdes-cmac-ver)
-  (run-all-des-tests))
+  (run-all-des-tests)
+  (sha1::run-all-tests)
+  (sha224::run-all-tests)
+  (sha256::run-all-tests)
+  (sha384::run-all-tests)
+  (sha512::run-all-tests)
+  (hmac-sha1::run-all-tests)
+  (hmac-sha224::run-all-tests)
+  (hmac-sha256::run-all-tests)
+  (hmac-sha384::run-all-tests)
+  (hmac-sha512::run-all-tests))
 ;; run like tls-aes-all-test::test-all if you want all tests

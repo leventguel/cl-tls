@@ -26,13 +26,14 @@
         (format t "❌ FAIL~%"))))
 
 (defun test-one-million-sha256 ()
-  (run-test "Test 5: 1 million 'a'" (make-array 1000000 :element-type '(unsigned-byte 8) :initial-element 97)))
+  (run-test "SHA256 Test 5: 1 million 'a'" (make-array 1000000 :element-type '(unsigned-byte 8) :initial-element 97)))
 
-(defun run-all-tests ()
-  (run-test "Test 1: Empty string" #())
-  (run-test "Test 2: 'abc'" #(97 98 99))
-  (run-test "Test 3: 'The quick brown fox...'" (string-to-bytes "The quick brown fox jumps over the lazy dog"))
-  (run-test "Test 4: 'The quick brown fox...' with period" (string-to-bytes "The quick brown fox jumps over the lazy dog.")))
-
-(run-all-tests)
-
+(defun run-all-tests (&optional one-million)
+  (run-test "SHA256 Test 1: Empty string" #())
+  (run-test "SHA256 Test 2: 'abc'" #(97 98 99))
+  (run-test "SHA256 Test 3: 'The quick brown fox...'"
+	    (string-to-bytes "The quick brown fox jumps over the lazy dog"))
+  (run-test "SHA256 Test 4: 'The quick brown fox...' with period"
+	    (string-to-bytes "The quick brown fox jumps over the lazy dog."))
+  (when one-million
+    (test-one-million-sha256)))

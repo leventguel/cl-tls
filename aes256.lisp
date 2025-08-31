@@ -1,9 +1,13 @@
 (defpackage :tls-aes256
   (:use :cl :shared-utils :tls-aes-utils)
-  (:export :expand-key-256 :aes256-ecb-encrypt-block :aes256-ecb-encrypt :aes256-ecb-decrypt-block :aes256-ecb-decrypt
-           :aes256-cbc-encrypt :aes256-cbc-decrypt :aes256-ctr-encrypt :aes256-ctr-decrypt :aes256-ofb-encrypt
-           :aes256-ofb-decrypt :aes256-cfb-xcrypt :aes256-cfb-encrypt :aes256-cfb-decrypt :aes256-cfb8-xcrypt
-	   :aes256-cfb1-xcrypt))
+  (:export :expand-key-256
+	   :aes256-ecb-encrypt-block :aes256-ecb-encrypt :aes256-ecb-decrypt-block :aes256-ecb-decrypt
+           :aes256-cbc-encrypt-block :aes256-cbc-encrypt :aes256-cbc-decrypt-block :aes256-cbc-decrypt
+	   :aes256-ctr-encrypt :aes256-ctr-decrypt
+	   :aes256-ofb-encrypt :aes256-ofb-decrypt
+	   :aes256-cfb-xcrypt :aes256-cfb-encrypt :aes256-cfb-decrypt
+	   :aes256-cfb8-xcrypt :aes256-cfb8-encrypt :aes256-cfb8-decrypt
+	   :aes256-cfb1-xcrypt :aes256-cfb1-encrypt :aes256-cfb1-decrypt))
 
 (in-package :tls-aes256)
 

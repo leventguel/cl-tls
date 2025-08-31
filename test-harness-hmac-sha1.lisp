@@ -18,18 +18,16 @@
 
 (defun run-all-tests ()
   ;; RFC 2202 Test 1
-  (run-test "Test 1: key = 0x0b * 20, msg = 'Hi There'"
+  (run-test "HMAC-SHA1 Test 1: key = 0x0b * 20, msg = 'Hi There'"
             (make-array 20 :element-type '(unsigned-byte 8) :initial-element #x0b)
             (string-to-bytes "Hi There"))
 
   ;; RFC 2202 Test 2
-  (run-test "Test 2: key = 'Jefe', msg = 'what do ya want for nothing?'"
+  (run-test "HMAC-SHA1 Test 2: key = 'Jefe', msg = 'what do ya want for nothing?'"
             (string-to-bytes "Jefe")
             (string-to-bytes "what do ya want for nothing?"))
 
   ;; RFC 2202 Test 3
-  (run-test "Test 3: key = 0xaa * 20, msg = 0xdd * 50"
+  (run-test "HMAC-SHA1 Test 3: key = 0xaa * 20, msg = 0xdd * 50"
             (make-array 20 :element-type '(unsigned-byte 8) :initial-element #xaa)
             (make-array 50 :element-type '(unsigned-byte 8) :initial-element #xdd)))
-
-(run-all-tests)
