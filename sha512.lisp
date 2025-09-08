@@ -1,6 +1,6 @@
 (defpackage :sha512
   (:use :cl :shared-utils :sha-utils)
-  (:export :sha512 :sha512-hex))
+  (:export :sha512 :sha512-hex :sha512->bytes))
 
 (in-package :sha512)
 
@@ -133,5 +133,14 @@
        (loop for word across digest
              do (loop for shift from 56 downto 0 by 8
                       do (format s "~2,'0X" (ldb (byte 8 shift) word))))))))
+
+(defun sha512->bytes (word-vector)
+  (let ((byte-vector (make-array 64 :element-type '(unsigned-byte 8))))
+    (loop for i from 0 below 8
+          for word = (aref word-vector i)
+          do (loop for j from 0 below 8
+                   do (setf (aref byte-vector (+ (* i 8) j))
+                            (ldb (byte 8 (* (- 7 j) 8)) word))))
+    byte-vector))
 
 (format t "~a~%" (sha512-hex (map 'vector #'char-code "abc")))

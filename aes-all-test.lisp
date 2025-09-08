@@ -25,6 +25,14 @@
 (load "rsp/test256.lisp")
 (load "rsp/des-mac-parser.lisp")
 (load "rsp/test-des-mac.lisp")
+(load "x509-parser/der/der-system.lisp")
+(load "x509-parser/crypto/rsa-system.lisp")
+(load "x509-parser/asn1/asn1-system.lisp")
+(load "x509-parser/x509/x509-system.lisp")
+(der-system::load-der)
+(rsa-system::load-rsa)
+(asn1-system::load-asn1)
+(x509-system::load-x509)
 
 (defpackage :tls-aes-all-test
   (:use :cl :parse-utils :shared-utils :des-utils :tls-aes-utils :sha-utils :sha1 :sha224 :sha256 :sha384 :sha512 :tls-aes128 :tls-aes192 :tls-aes256 :tls-aes-ghash :tls-aes128-gcm :tls-aes192-gcm :tls-aes256-gcm :tls-aes-rsp128-parser :tls-aes-rsp192-parser :tls-aes-rsp256-parser :aes128rsp-test :aes192rsp-test :aes256rsp-test :des-test :des-mac-parser :des-mac-test))

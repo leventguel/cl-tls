@@ -1,6 +1,6 @@
 (defpackage :sha224
   (:use :cl :shared-utils :sha-utils)
-  (:export :sha224 :sha224-hex))
+  (:export :sha224 :sha224-hex :sha224->bytes))
 
 (in-package :sha224)
 
@@ -100,5 +100,15 @@
        (loop for word across digest
              do (loop for shift from 24 downto 0 by 8
                       do (format s "~2,'0X" (ldb (byte 8 shift) word))))))))
+
+(defun sha224->bytes (word-vector)
+  (let ((byte-vector (make-array 28 :element-type '(unsigned-byte 8))))
+    (loop for i from 0 below 7
+          for word = (aref word-vector i)
+          do (setf (aref byte-vector (* i 4))     (ldb (byte 8 24) word)
+                   (aref byte-vector (+ (* i 4) 1)) (ldb (byte 8 16) word)
+                   (aref byte-vector (+ (* i 4) 2)) (ldb (byte 8 8) word)
+                   (aref byte-vector (+ (* i 4) 3)) (ldb (byte 8 0) word)))
+    byte-vector))
 
 (format t "~a~%" (sha224-hex (map 'vector #'char-code "abc")))

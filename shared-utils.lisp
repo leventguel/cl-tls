@@ -1,15 +1,27 @@
 (defpackage :shared-utils
   (:use :cl)
-  (:export :print-hex :words-to-bytes :words64-to-bytes
+  (:export :print-indented :print-indented-dynamic
+	   :print-hex :words-to-bytes :words64-to-bytes :wordsn-to-bytes
 	   :write-hex-lines :generate-random-data
 	   :get-bit :set-bit :bits-equal-p :byte->bits :byte-to-bits :bits-to-byte
 	   :byte-vector-to-bit-vector :bit-vector-to-byte-vector :valid-byte-vector-p :ensure-byte-vector
 	   :ensure-bit-vector :xor-bytes :xor-blocks
-	   :byte-vector-to-hex-string :hex-string-to-byte-vector :safe-hex-string-to-byte-vector
-	   :hex->bytes :bytes->hex :byte-vector-to-integer :integer-to-byte-vector :bitstring-to-byte-vector
+	   :normalize-to-byte-vector
+	   :byte-vector-to-hex-string :hex-string-to-byte-vector
+	   :bignum-to-minimal-hex :safe-hex-string-to-byte-vector
+	   :bytes->hex :hex->bytes :byte-vector-to-integer :integer-to-byte-vector :bitstring-to-byte-vector
 	   :string-to-bytes :split-into-blocks :revers-128bit-int :reverse-block))
 
 (in-package :shared-utils)
+
+(defun print-indented (label value &key (indent 12))
+  (format t "~%~A~%" label)
+  (format t "~vA: ~A~%" indent "" value))
+
+(defun print-indented-dynamic (label value &optional (indent 12))
+  (let ((indent (+ (length label) 2))) ; 2 for ": "
+    (format t "~%~A~%" label)
+    (format t "~vA: ~A~%" indent "" value)))
 
 (defun print-hex (buf)
   (loop for byte across buf do
@@ -36,6 +48,19 @@
           for base = (* i 8)
           do (loop for j from 0 below 8
                    for shift = (* 8 (- 7 j))
+                   do (setf (aref bytes (+ base j))
+                            (ldb (byte 8 shift) word))))
+    bytes))
+
+;; word-size bit
+(defun wordsn-to-bytes (words word-size)
+  "Converts a vector of unsigned-byte N words to a byte vector."
+  (let ((bytes (make-array (* word-size (length words)) :element-type '(unsigned-byte 8))))
+    (loop for i from 0 below (length words)
+          for word = (aref words i)
+          for base = (* i word-size)
+          do (loop for j from 0 below word-size
+                   for shift = (* 8 (- (1- word-size) j))
                    do (setf (aref bytes (+ base j))
                             (ldb (byte 8 shift) word))))
     bytes))
@@ -145,8 +170,80 @@
 (defun xor-blocks (a b)
   (map '(vector (unsigned-byte 8)) #'logxor (ensure-byte-vector a) (ensure-byte-vector b)))
 
+(defun normalize-to-byte-vector (input &optional size)
+  "Converts input (hex string, integer, or byte vector) to a byte vector of SIZE."
+  (cond
+    ((stringp input)
+     (let ((vec (hex-string-to-byte-vector input)))
+       (if size
+           (subseq
+	    (concatenate 'vector
+			 (make-array (- size (length vec))
+				     :element-type '(unsigned-byte 8)
+				     :initial-element 0)
+			 vec)
+	    0 size)
+           vec)))
+    ((integerp input)
+     (integer-to-byte-vector input size))
+    ((typep input '(vector (unsigned-byte 8)))
+     (if size
+         (subseq
+	  (concatenate 'vector
+		       (make-array (- size (length input))
+				   :element-type '(unsigned-byte 8)
+				   :initial-element 0)
+		       input)
+	  0 size)
+         input))
+    (t (error "Unsupported input type: ~A" (type-of input)))))
+
 (defun byte-vector-to-hex-string (vec)
-  (format nil "~{~2,'0X~}" (coerce vec 'list)))
+  "Converts a vector of unsigned-byte N to a hex string, where N ∈ {8, 16, 32, 64}."
+  (with-output-to-string (s)
+    (loop for elem across vec
+          do (cond
+               ((typep elem '(unsigned-byte 8))
+                (format s "~2,'0X" elem))
+               ((typep elem '(unsigned-byte 16))
+                (loop for shift from 8 downto 0 by 8
+                      do (format s "~2,'0X" (ldb (byte 8 shift) elem))))
+               ((typep elem '(unsigned-byte 32))
+                (loop for shift from 24 downto 0 by 8
+                      do (format s "~2,'0X" (ldb (byte 8 shift) elem))))
+               ((typep elem '(unsigned-byte 64))
+                (loop for shift from 56 downto 0 by 8
+                      do (format s "~2,'0X" (ldb (byte 8 shift) elem))))
+               (t (error "Unsupported element type: ~A" (type-of elem)))))))
+
+(defun byte-vector-to-hex-string (vec)
+  "Converts a vector of unsigned-byte N elements to a hex string."
+  (with-output-to-string (s)
+    (loop for elem across vec
+          for width = (cond
+                        ((typep elem '(unsigned-byte 8)) 1)
+                        ((typep elem '(unsigned-byte 16)) 2)
+                        ((typep elem '(unsigned-byte 32)) 4)
+                        ((typep elem '(unsigned-byte 64)) 8)
+                        (t (error "Unsupported element type: ~A" (type-of elem))))
+          do (loop for shift from (* 8 (1- width)) downto 0 by 8
+                   do (format s "~2,'0X" (ldb (byte 8 shift) elem))))))
+
+(defun byte-vector-to-hex-string (vec &optional (width-in-bytes nil))
+  "Converts a vector of integers to a hex string.
+If WIDTH-IN-BYTES is provided, each element is padded to that width.
+Otherwise, width is inferred from the element's type or value."
+  (with-output-to-string (s)
+    (loop for elem across vec
+          for width = (or width-in-bytes
+                          (cond
+                            ((typep elem '(unsigned-byte 8)) 1)
+                            ((typep elem '(unsigned-byte 16)) 2)
+                            ((typep elem '(unsigned-byte 32)) 4)
+                            ((typep elem '(unsigned-byte 64)) 8)
+                            (t (ceiling (integer-length elem) 8)))) ; fallback for bignums
+          do (loop for shift from (* 8 (1- width)) downto 0 by 8
+                   do (format s "~2,'0X" (ldb (byte 8 shift) elem))))))
 
 (defun hex-string-to-byte-vector (hex)
   "Converts a hex string to a vector of unsigned bytes. Ignores whitespace."
@@ -161,12 +258,22 @@
             (parse-integer clean :start (* i 2) :end (+ (* i 2) 2) :radix 16)))
     bytes))
 
+(defun bignum-to-minimal-hex (num)
+  (let* ((bits (integer-length num))
+         (bytes (ceiling bits 8)))
+    (with-output-to-string (s)
+      (loop for shift from (* 8 (1- bytes)) downto 0 by 8
+            do (format s "~2,'0X" (ldb (byte 8 shift) num))))))
+
 (defun safe-hex-string-to-byte-vector (s)
   (let ((clean (string-trim '(#\Space #\Tab #\Newline #\Return) s)))
     (if (or (string= clean "")
             (oddp (length clean)))
         (error "Malformed hex string: ~A" clean)
         (hex-string-to-byte-vector clean))))
+
+(defun bytes->hex (vec)
+  (byte-vector-to-hex-string vec))
 
 (defun hex->bytes (hex)
   "Converts hex string to a vector of (unsigned-byte 8)."
@@ -178,28 +285,30 @@
             for j from 0 do (setf (aref vec j) b))
       vec)))
 
-(defun bytes->hex (vec)
-  "Converts a vector of unsigned-byte 8 to a hex string."
-  (with-output-to-string (s)
-    (map nil (lambda (b) (format s "~2,'0X" b)) vec)))
+(defun byte-vector-to-integer (vec &optional (element-width 8))
+  "Converts a vector of unsigned-byte N elements (big-endian) into an integer.
+   Assumes each element is element-width bits wide.
+   Supports 8, 16, 32, 64, and arbitrary widths."
+  (let ((byte-width (ceiling element-width 8)))
+    (reduce (lambda (acc elem)
+              (+ (* acc (expt 256 byte-width)) elem))
+            vec
+            :initial-value 0)))
 
-(defun byte-vector-to-integer (bytes)
-  "Convert a vector of unsigned 8-bit bytes (big-endian) into an integer."
-  (check-type bytes (vector (unsigned-byte 8)))
-  (reduce (lambda (acc byte)
-            (+ (* acc 256) byte))
-          bytes
-          :initial-value 0))
-
-(defun integer-to-byte-vector (n size)
+(defun integer-to-byte-vector (n &optional (size 8))
   "Convert integer N to a vector of unsigned 8-bit bytes (big-endian).
    Pads or truncates to SIZE bytes."
   (check-type n integer)
-  (check-type size integer)
-  (let ((bytes (make-array size :element-type '(unsigned-byte 8))))
-    (dotimes (i size)
-      (setf (aref bytes (- size i 1)) (logand #xFF (ash n (- (* i 8))))))
-    bytes))
+  (if size
+      ;; Fixed-size padded version
+      (let ((bytes (make-array size :element-type '(unsigned-byte 8))))
+        (dotimes (i size)
+          (setf (aref bytes (- size i 1)) (logand #xFF (ash n (- (* i 8))))))
+        bytes)
+      ;; Minimal-length version
+      (loop for i from (1- (integer-length n)) downto 0 by 8
+            collect (ldb (byte 8 i) n) into bytes
+            finally (return (coerce bytes 'vector)))))
 
 (defun bitstring-to-byte-vector (bitstr)
   "Converts a string of bits (e.g. '1110') to a packed byte vector."

@@ -3,22 +3,10 @@
   (:export :read-der-file :*server-der* :*cert-structure* :*spki-structure* :*pubkey-bitstring* :*pubkey-bytes*
 	   :*rsa-key* :*oid-map* :parse-der-integer :parse-der-length :parse-der-sequence :parse-der-element
 	   :parse-time :maybe-decode-oid :decode-attribute-pair :find-subject-cn
-	   :der-tag-type :oid->name :context-specific-constructed-p :pretty-print-der-raw :pretty-print-der
-	   :extract-rsa-public-key :find-subject-public-key-info))
+	   :der-tag-type :der-oid->name :context-specific-constructed-p :pretty-print-der-raw :pretty-print-der
+	   :der-extract-rsa-public-key :find-subject-public-key-info))
 
-(defun read-der-file (path)
-  "Read a binary DER file into a vector of bytes."
-  (with-open-file (stream path :element-type '(unsigned-byte 8) :direction :input)
-    (let ((bytes (make-array (file-length stream) :element-type '(unsigned-byte 8))))
-      (read-sequence bytes stream)
-      bytes)))
-
-(defparameter *server-der* (read-der-file "/home/inline/clocc/src/ssl/server.der"))
-(defparameter *cert-structure* (parse-der-sequence *server-der*))
-(defparameter *spki-structure* (find-subject-public-key-info *cert-structure*))
-(defparameter *pubkey-bitstring* (second *spki-structure*))
-(defparameter *pubkey-bytes* (decode-bit-string *pubkey-bitstring*))
-(defparameter *rsa-key* (parse-der-sequence *pubkey-bytes*))
+(in-package :der-parser)
 
 (defparameter *oid-map*
   '(("2.5.4.3" . "CN")
@@ -31,6 +19,13 @@
     ("1.2.840.113549.1.1.1" . "rsaEncryption")
     ;; Add more as needed
     ))
+
+(defun read-der-file (path)
+  "Read a binary DER file into a vector of bytes."
+  (with-open-file (stream path :element-type '(unsigned-byte 8) :direction :input)
+    (let ((bytes (make-array (file-length stream) :element-type '(unsigned-byte 8))))
+      (read-sequence bytes stream)
+      bytes)))
 
 (defun parse-der-integer (bytes)
   "Parse a DER-encoded INTEGER from a byte vector."
@@ -64,21 +59,6 @@
                                 :initial-value 0)))
             (values length (+ 1 offset num-bytes)))))))
 
-(defun parse-der-sequence (bytes)
-  "Parse a DER-encoded SEQUENCE and return a list of parsed elements."
-  (let ((tag (aref bytes 0)))
-    (unless (= tag #x30)
-      (error "Expected SEQUENCE tag"))
-    (multiple-value-bind (length offset) (parse-der-length bytes 1)
-      (let ((end (+ offset length))
-            (elements nil))
-        (loop while (< offset end) do
-              (multiple-value-bind (element new-offset)
-		  (parse-der-element bytes offset)
-		(push element elements)
-		(setf offset new-offset)))
-        (nreverse elements)))))
-
 ;; Recursive
 (defun parse-der-element (bytes offset)
   "Parse a single DER element starting at offset. Returns (value . new-offset)."
@@ -95,6 +75,22 @@
           (t
            (values (list :unknown-tag tag :raw value-bytes)
                    (+ new-offset length))))))))
+
+(defun parse-der-sequence (bytes)
+  "Parse a DER-encoded SEQUENCE and return a list of parsed elements."
+  (let ((tag (aref bytes 0)))
+    (unless (= tag #x30)
+      (error "Expected SEQUENCE tag"))
+    (multiple-value-bind (length offset) (parse-der-length bytes 1)
+      (let ((end (+ offset length))
+            (elements nil))
+        (loop while (< offset end) do
+              (multiple-value-bind (element new-offset)
+		  (parse-der-element bytes offset)
+		(push element elements)
+		(setf offset new-offset)))
+        (nreverse elements)))))
+
 
 (defun parse-time (time-node)
   (let ((raw (second time-node))) ;; assuming (tag . value)
@@ -119,7 +115,7 @@
              (vectorp (second (fourth obj))))
     (let* ((bytes (second (fourth obj)))
            (oid (parse-object-id bytes))
-           (name (oid->name oid)))
+           (name (der-oid->name oid)))
       (format nil "OID ~A (~A)" oid name))))
 
 (defun decode-attribute-pair (obj)
@@ -135,7 +131,7 @@
                      (= (second oid-part) #x06)) ;; OID tag
             (let* ((oid-bytes (reconstruct-der-element #x06 (getf oid-part :raw)))
                    (oid (parse-object-id oid-bytes))
-                   (name (oid->name oid))
+                   (name (der-oid->name oid))
                    (value-bytes (getf value-part :raw)))
               (format nil "~A: ~A" name (bytes-to-string value-bytes)))))))))
 
@@ -163,7 +159,7 @@
     (#x03 :bit-string)
     (t :unknown)))
 
-(defun oid->name (oid)
+(defun der-oid->name (oid)
   (or (cdr (assoc oid *oid-map* :test #'string=)) oid))
 
 (defun context-specific-constructed-p (tag)
@@ -254,7 +250,7 @@
 	 (pretty-print-der item (+ indent 2)))
        (format t "~%~A)" prefix)))))
 
-(defun extract-rsa-public-key (cert-structure)
+(defun der-extract-rsa-public-key (cert-structure)
   "Extract RSA modulus and exponent from parsed certificate structure."
   (let* ((spki-entry (find-if (lambda (e)
                                 (and (listp e)
@@ -281,5 +277,12 @@
                                  (= (second sub) 3))) ;; BIT STRING tag
                           element)))
              tbs-cert)))
+
+(defparameter *server-der* (read-der-file "/home/inline/clocc/src/ssl/server.der"))
+(defparameter *cert-structure* (parse-der-sequence *server-der*))
+(defparameter *spki-structure* (find-subject-public-key-info *cert-structure*))
+(defparameter *pubkey-bitstring* (second *spki-structure*))
+(defparameter *pubkey-bytes* (decode-bit-string *pubkey-bitstring*))
+(defparameter *rsa-key* (parse-der-sequence *pubkey-bytes*))
 
 (format t "Modulus in Hex: ~a~%" (bigint-to-hex (car *rsa-key*))) ;; Modulus in hex

@@ -1,6 +1,9 @@
 (defpackage :asn1-types
   (:use :cl)
-  (:export :*asn1-types*))
+  (:export :*asn1-types*
+	   :byte-stream :byte-stream-pos :byte-stream-data :make-byte-stream :byte-stream-p))
+
+(in-package :asn1-types)
 
 (defparameter *asn1-types*
   '((0 . :eoc)
@@ -14,3 +17,7 @@
     (17 . :set)
     ;; Add more as needed
     ))
+
+(defstruct byte-stream
+  data
+  (pos 0))

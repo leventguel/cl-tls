@@ -6,6 +6,8 @@
   (:export :decode-utf8 :byte-stream-read-byte :byte-stream-peek-byte
 	   :read-byte-from-any :peek-byte-from-any))
 
+(in-package :asn1-utils)
+
 (defun decode-utf8 (bytes)
   (handler-case
       (flexi-streams:octets-to-string bytes :external-format :utf-8)
@@ -16,7 +18,7 @@
   (let ((pos (byte-stream-pos stream))
         (data (byte-stream-data stream)))
     (if (>= pos (length data))
-        nil
+	nil
         (prog1 (aref data pos)
           (setf (byte-stream-pos stream) (1+ pos))))))
 
@@ -24,7 +26,7 @@
   (let ((pos (byte-stream-pos stream))
         (data (byte-stream-data stream)))
     (if (>= pos (length data))
-        nil
+	nil
         (aref data pos))))
 
 (defun read-byte-from-any (stream)

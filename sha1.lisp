@@ -1,6 +1,6 @@
 (defpackage :sha1
   (:use :cl :shared-utils :sha-utils)
-  (:export :sha1 :sha1-hex))
+  (:export :sha1 :sha1-hex :sha1->bytes))
 
 (in-package :sha1)
 
@@ -89,6 +89,16 @@
        (loop for word across digest
              do (loop for shift from 24 downto 0 by 8
                       do (format s "~2,'0X" (ldb (byte 8 shift) word))))))))
+
+(defun sha1->bytes (word-vector)
+  (let ((byte-vector (make-array 20 :element-type '(unsigned-byte 8))))
+    (loop for i from 0 below 5
+          for word = (aref word-vector i)
+          do (setf (aref byte-vector (* i 4))     (ldb (byte 8 24) word)
+                   (aref byte-vector (+ (* i 4) 1)) (ldb (byte 8 16) word)
+                   (aref byte-vector (+ (* i 4) 2)) (ldb (byte 8 8) word)
+                   (aref byte-vector (+ (* i 4) 3)) (ldb (byte 8 0) word)))
+    byte-vector))
 
 (defun sha1-bytes (message) (words-to-bytes (sha1 message)))
 (defun sha1-digest-hex (message) (bytes-to-hex (sha1-bytes message)))

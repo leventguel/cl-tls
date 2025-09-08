@@ -1,0 +1,3 @@
+#!/bin/env bash
+dd if=cert.der bs=1 skip=4 count=539 of=tbs-value.der
+dd if=cert.der bs=1 skip=4 count=543 of=tbs-full.der

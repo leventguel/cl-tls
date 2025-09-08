@@ -1,16 +1,35 @@
 ;; assumes basic DER decoding utilities (no full ASN.1 support)
 (defpackage :x509-parser
-  (:use :cl :der-parser :x509-fields)
-  (:export :get-tagged :get-sequence-element
-	   :parse-x509-certificate :parse-name :parse-rdn :parse-subject-public-key-info))
+  (:use :cl
+	:shared-utils :sha-utils :der-utils :asn1-utils :rsa-utils
+	:sha1 :sha224 :sha256 :sha384 :sha512
+	:hmac-sha1 :hmac-sha224 :hmac-sha256 :hmac-sha384 :hmac-sha512
+	:der-parser
+	:rsa-pkcs1 :rsa-core :rsa-key
+	:asn1-types :asn1-schema :asn1-parser :asn1-encoders :asn1-extractors
+	:x509-fields)
+  (:export :parse-x509-certificate :parse-name :parse-rdn :parse-subject-public-key-info))
 
 (in-package :x509-parser)
 
-(defun get-tagged (seq tag)
-  (find-if (lambda (el) (and (consp el) (= (car el) tag))) seq))
+;; name and validity
+(defun parse-rdn (rdn-set)
+  (mapcar (lambda (attr)
+            (let ((oid (get-sequence-element attr 0))
+                  (val (get-sequence-element attr 1)))
+              (cons (oid->name oid) val)))
+          rdn-set))
 
-(defun get-sequence-element (seq index)
-  (nth index seq))
+(defun parse-name (name-seq)
+  (mapcar #'parse-rdn name-seq))
+
+;; pubkey info
+(defun parse-subject-public-key-info (spki-seq)
+  (let ((algo (get-sequence-element spki-seq 0))
+        (bit-str (get-sequence-element spki-seq 1)))
+    (let ((key-seq (parse-der-sequence (parse-bit-string bit-str))))
+      (list :modulus (get-sequence-element key-seq 0)
+            :exponent (get-sequence-element key-seq 1)))))
 
 (defun parse-x509-certificate (der-bytes)
   (let ((seq (parse-der-sequence der-bytes)))
@@ -33,23 +52,3 @@
             :signature-algorithm sig-algo
             :signature-value sig-value
             :extensions extensions))))
-
-;; name and validity
-
-(defun parse-name (name-seq)
-  (mapcar #'parse-rdn name-seq))
-
-(defun parse-rdn (rdn-set)
-  (mapcar (lambda (attr)
-            (let ((oid (get-sequence-element attr 0))
-                  (val (get-sequence-element attr 1)))
-              (cons (oid->name oid) val)))
-          rdn-set))
-
-;; pubkey info
-(defun parse-subject-public-key-info (spki-seq)
-  (let ((algo (get-sequence-element spki-seq 0))
-        (bit-str (get-sequence-element spki-seq 1)))
-    (let ((key-seq (parse-der-sequence (parse-bit-string bit-str))))
-      (list :modulus (get-sequence-element key-seq 0)
-            :exponent (get-sequence-element key-seq 1)))))

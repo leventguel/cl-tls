@@ -7,6 +7,8 @@
   (:export :bigint-to-hex :integer-to-byte-array :bytes-to-string :string-match
 	   :decode-bit-string :parse-object-id :reconstruct-der-element :cert-fingerprint))
 
+(in-package :der-utils)
+
 (defun bigint-to-hex (n)
   (format nil "~{~2,'0X~}" (coerce (integer-to-byte-array n) 'list)))
 

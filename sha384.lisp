@@ -1,6 +1,6 @@
 (defpackage :sha384
   (:use :cl :shared-utils :sha-utils)
-  (:export :sha384 :sha384-hex))
+  (:export :sha384 :sha384-hex :sha384->bytes))
 
 (in-package :sha384)
 
@@ -137,5 +137,14 @@
        (loop for word across digest
              do (loop for shift from 56 downto 0 by 8
                       do (format s "~2,'0X" (ldb (byte 8 shift) word))))))))
+
+(defun sha384->bytes (word-vector)
+  (let ((byte-vector (make-array 48 :element-type '(unsigned-byte 8))))
+    (loop for i from 0 below 6
+          for word = (aref word-vector i)
+          do (loop for j from 0 below 8
+                   do (setf (aref byte-vector (+ (* i 8) j))
+                            (ldb (byte 8 (* (- 7 j) 8)) word))))
+    byte-vector))
 
 (format t "~a~%" (sha384-hex (map 'vector #'char-code "abc")))
