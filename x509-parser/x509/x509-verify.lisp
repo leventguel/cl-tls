@@ -48,6 +48,7 @@
          (tbs-bytes (subseq cert-bytes
 			    tbs-start
 			    (+ tbs-start tbs-total-length))))
+    (declare (ignorable tbs-length))
     (verify-signature tbs-bytes signature-bytes rsa-key)))
 
 (defun verify-self-signed-certificate (cert-bytes)
@@ -56,6 +57,7 @@
 	 (tbs-start (+ (getf tbs :start-pos) 4))
 	 (tbs-length (getf tbs :length))
 	 (tbs-total-length (getf tbs :total-length)))
+    (declare (ignorable tbs-start tbs-length tbs-total-length))
     (if (equalp (getf tbs :issuer) (getf tbs :subject))
         (progn
           (format t "~%✅ Self-signed certificate detected")

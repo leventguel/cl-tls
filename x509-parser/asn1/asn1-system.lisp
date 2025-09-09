@@ -10,5 +10,4 @@
   (load "x509-parser/asn1/asn1-utils.lisp")
   (load "x509-parser/asn1/asn1-parser.lisp")
   (load "x509-parser/asn1/asn1-encoders.lisp")
-  (load "x509-parser/asn1/asn1-extractors.lisp")
-  (load "x509-parser/asn1/test-asn1.lisp"))
+  (load "x509-parser/asn1/asn1-extractors.lisp"))

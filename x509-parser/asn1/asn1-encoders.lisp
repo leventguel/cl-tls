@@ -1,13 +1,13 @@
 (defpackage :asn1-encoders
   (:use :cl
-	:shared-utils
+	:shared-utils :asn1-utils :asn1-parser
 	:sha1 :sha224 :sha256 :sha384 :sha512
 	:hmac-sha1 :hmac-sha224 :hmac-sha256 :hmac-sha384 :hmac-sha512)
   (:export :encode-length :encode-integer :encode-sequence :encode-octet-string :encode-bit-string
 	   :encode-oid-subid :encode-object-identifier :encode-null :encode-digest-info
 	   :build-digest-info
 	   :encode-pkcs1-v1.5 :encode-tag-byte :encode-asn1-value :encode-asn1-element
-	   :test-encode-sequence :test-encode-object :test-encode-digest :test-encode-padding))
+	   :test-encode-sequence :test-encode-object :test-encode-digest))
 
 (in-package :asn1-encoders)
 
@@ -117,6 +117,8 @@
         (pc-bit (if constructed 32 0)))
     (vector (+ class-bits pc-bit tag))))
 
+(declaim (ftype function encode-asn1-element))
+
 (defun encode-asn1-value (value constructed)
   (cond
     (constructed
@@ -154,18 +156,6 @@
   ;; sha256WithRSAEncryption
   (encode-object-identifier '(1 2 840 113549 1 1 11)))
 
-(defun test-encode-digest ()
+(defun test-encode-digest (some-bytes)
   (let ((hash (sha256 some-bytes)))
     (encode-digest-info hash)))
-
-(defun test-encode-padding ()
-  (let* ((hash (sha256 tbs-bytes))
-	 (digest-info (encode-digest-info hash))
-	 (modulus-size (/ (integer-length n) 8))
-	 (padded (encode-pkcs1-v1.5 digest-info modulus-size)))
-    ;; Convert to integer for RSA signing
-    (byte-vector-to-integer padded)))
-
-(defun test-signature-generation ()
-  ;; where d is your private exponent
-  (mod-exp padded d n))

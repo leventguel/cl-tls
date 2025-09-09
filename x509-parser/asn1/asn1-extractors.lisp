@@ -4,7 +4,7 @@
 	   :decode-time-string-raw :decode-time-string
 	   :extract-validity-raw :extract-validity
 	   :general-name-type
-	   :extract-extension-block :extract-extensions
+	   :extract-extensions-block :extract-extensions
 	   :decode-extension-value
 	   :decode-general-names
 	   :decode-subject-key-identifier :decode-authority-key-identifier :decode-basic-constraints
@@ -12,6 +12,7 @@
 	   :extract-bit-string-sequence
 	   :extract-element-bytes :extract-element-bytes-from-der
 	   :extract-raw-tbs
+	   :extract-signature-algorithm-name
 	   :extract-printable-values))
 
 (in-package :asn1-extractors)
@@ -219,6 +220,10 @@
 	 (tbs-start (+ (getf tbs :start-pos) 4))
 	 (tbs-total-length (getf tbs :total-length)))
     (subseq cert-bytes tbs-start (+ tbs-start tbs-total-length))))
+
+(defun extract-signature-algorithm-name (sig-algo-element)
+  (let ((fields (getf sig-algo-element :value)))
+    (oid->name (getf (first fields) :value))))
 
 (defun extract-printable-values (element)
   (let ((results '()))

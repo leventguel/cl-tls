@@ -16,17 +16,18 @@
            (setf exp (floor exp 2))
         finally (return result)))
 
-(defun mod-inverse (a m)
-  (multiple-value-bind (g x y) (extended-gcd a m)
-    (if (= g 1)
-        (mod x m)
-        nil))) ;; no inverse if gcd ≠ 1
-
 (defun extended-gcd (a b)
   (if (= b 0)
       (values a 1 0)
       (multiple-value-bind (g x1 y1) (extended-gcd b (mod a b))
         (values g y1 (- x1 (* (floor a b) y1))))))
+
+(defun mod-inverse (a m)
+  (multiple-value-bind (g x y) (extended-gcd a m)
+    (declare (ignorable y))
+    (if (= g 1)
+        (mod x m)
+        nil))) ;; no inverse if gcd ≠ 1
 
 (defun random-bignum (bits)
   (let ((bytes (make-array (ceiling bits 8) :element-type '(unsigned-byte 8)

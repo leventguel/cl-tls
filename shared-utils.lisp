@@ -6,10 +6,11 @@
 	   :get-bit :set-bit :bits-equal-p :byte->bits :byte-to-bits :bits-to-byte
 	   :byte-vector-to-bit-vector :bit-vector-to-byte-vector :valid-byte-vector-p :ensure-byte-vector
 	   :ensure-bit-vector :xor-bytes :xor-blocks
-	   :normalize-to-byte-vector
 	   :byte-vector-to-hex-string :hex-string-to-byte-vector
 	   :bignum-to-minimal-hex :safe-hex-string-to-byte-vector
-	   :bytes->hex :hex->bytes :byte-vector-to-integer :integer-to-byte-vector :bitstring-to-byte-vector
+	   :bytes->hex :hex->bytes :byte-vector-to-integer :integer-to-byte-vector
+	   :normalize-to-byte-vector
+	   :bitstring-to-byte-vector
 	   :string-to-bytes :split-into-blocks :revers-128bit-int :reverse-block))
 
 (in-package :shared-utils)
@@ -18,7 +19,7 @@
   (format t "~%~A~%" label)
   (format t "~vA: ~A~%" indent "" value))
 
-(defun print-indented-dynamic (label value &optional (indent 12))
+(defun print-indented-dynamic (label value)
   (let ((indent (+ (length label) 2))) ; 2 for ": "
     (format t "~%~A~%" label)
     (format t "~vA: ~A~%" indent "" value)))
@@ -170,34 +171,6 @@
 (defun xor-blocks (a b)
   (map '(vector (unsigned-byte 8)) #'logxor (ensure-byte-vector a) (ensure-byte-vector b)))
 
-(defun normalize-to-byte-vector (input &optional size)
-  "Converts input (hex string, integer, or byte vector) to a byte vector of SIZE."
-  (cond
-    ((stringp input)
-     (let ((vec (hex-string-to-byte-vector input)))
-       (if size
-           (subseq
-	    (concatenate 'vector
-			 (make-array (- size (length vec))
-				     :element-type '(unsigned-byte 8)
-				     :initial-element 0)
-			 vec)
-	    0 size)
-           vec)))
-    ((integerp input)
-     (integer-to-byte-vector input size))
-    ((typep input '(vector (unsigned-byte 8)))
-     (if size
-         (subseq
-	  (concatenate 'vector
-		       (make-array (- size (length input))
-				   :element-type '(unsigned-byte 8)
-				   :initial-element 0)
-		       input)
-	  0 size)
-         input))
-    (t (error "Unsupported input type: ~A" (type-of input)))))
-
 (defun byte-vector-to-hex-string (vec)
   "Converts a vector of unsigned-byte N to a hex string, where N ∈ {8, 16, 32, 64}."
   (with-output-to-string (s)
@@ -258,6 +231,7 @@ Otherwise, width is inferred from the element's type or value."
             (parse-integer clean :start (* i 2) :end (+ (* i 2) 2) :radix 16)))
     bytes))
 
+
 (defun bignum-to-minimal-hex (num)
   (let* ((bits (integer-length num))
          (bytes (ceiling bits 8)))
@@ -309,6 +283,34 @@ Otherwise, width is inferred from the element's type or value."
       (loop for i from (1- (integer-length n)) downto 0 by 8
             collect (ldb (byte 8 i) n) into bytes
             finally (return (coerce bytes 'vector)))))
+
+(defun normalize-to-byte-vector (input &optional size)
+  "Converts input (hex string, integer, or byte vector) to a byte vector of SIZE."
+  (cond
+    ((stringp input)
+     (let ((vec (hex-string-to-byte-vector input)))
+       (if size
+           (subseq
+	    (concatenate 'vector
+			 (make-array (- size (length vec))
+				     :element-type '(unsigned-byte 8)
+				     :initial-element 0)
+			 vec)
+	    0 size)
+           vec)))
+    ((integerp input)
+     (integer-to-byte-vector input size))
+    ((typep input '(vector (unsigned-byte 8)))
+     (if size
+         (subseq
+	  (concatenate 'vector
+		       (make-array (- size (length input))
+				   :element-type '(unsigned-byte 8)
+				   :initial-element 0)
+		       input)
+	  0 size)
+         input))
+    (t (error "Unsupported input type: ~A" (type-of input)))))
 
 (defun bitstring-to-byte-vector (bitstr)
   "Converts a string of bits (e.g. '1110') to a packed byte vector."

@@ -35,6 +35,7 @@
          (digest-info (parse-digest-info digest-info-bytes))
 	 (algo-name (getf digest-info :algorithm-oid))
 	 (expected-hash (compute-digest algo-name tbs-bytes)))
+    (declare (ignorable tbs-length))
     (if (equalp (getf digest-info :hash) expected-hash)
         (format t "~%✅ Signature Verified")
         (format t "~%❌ Signature Verification Failed"))))

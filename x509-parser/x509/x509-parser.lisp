@@ -27,6 +27,7 @@
 (defun parse-subject-public-key-info (spki-seq)
   (let ((algo (get-sequence-element spki-seq 0))
         (bit-str (get-sequence-element spki-seq 1)))
+    (declare (ignorable algo))
     (let ((key-seq (parse-der-sequence (parse-bit-string bit-str))))
       (list :modulus (get-sequence-element key-seq 0)
             :exponent (get-sequence-element key-seq 1)))))

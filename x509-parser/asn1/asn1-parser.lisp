@@ -49,16 +49,12 @@
               tag-byte class constructed tag-number))
     (list :class class :constructed constructed :tag tag-number)))
 
+(declaim (ftype function parse-asn1-element))
+
 (defun parse-asn1-sequence (stream &optional (absolute-offset 0))
   (let ((elements nil))
     (loop while (peek-byte-from-any stream)
           do (push (parse-asn1-element stream absolute-offset) elements))
-    (nreverse elements)))
-
-(defun parse-asn1-sequence (stream)
-  (let ((elements nil))
-    (loop while (peek-byte-from-any stream)
-          do (push (parse-asn1-element stream) elements))
     (nreverse elements)))
 
 (defun parse-asn1-element (stream &optional (absolute-offset 0))
@@ -91,6 +87,12 @@
 			  (make-byte-stream :data value-bytes :pos 0)
 			  (+ start-pos absolute-offset header-length))
 			 value-bytes))))))
+
+(defun parse-asn1-sequence (stream)
+  (let ((elements nil))
+    (loop while (peek-byte-from-any stream)
+          do (push (parse-asn1-element stream) elements))
+    (nreverse elements)))
 
 (defun parse-asn1-element (stream)
   (let ((start-pos (byte-stream-pos stream)))

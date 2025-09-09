@@ -7,6 +7,7 @@
 (defun gctr-192 (key icb plaintext)
   (let ((blocks (chunk-all plaintext))
         (out '()))
+    (declare (ignorable out))
     (loop for blk in blocks
           for ctr = (inc-counter icb) then (inc-counter ctr)
           for ek = (aes192-ecb-encrypt ctr key t nil)
@@ -15,6 +16,7 @@
 
 (defun aes192-gcm-encrypt (plaintext key iv &optional (aad #()) (taglen 128) (aad-len 0) (ctlen 0) verbose)
   "Encrypts plaintext using AES-GCM. Returns (ciphertext truncated-tag)."
+  (declare (ignorable aad-len ctlen))
   (let* ((expanded-key
           (cond ((= (length key) 24) (expand-key-192 key))
                 (t (error "Invalid AES key length: ~D" (length key)))))
@@ -66,6 +68,7 @@
 
 (defun aes192-gcm-decrypt (ciphertext key iv tag &optional (aad #()) (taglen 128) (aad-len 0) (ctlen 0) verbose)
   "Decrypts AES-GCM ciphertext. Returns plaintext if tag verifies, else error."
+  (declare (ignorable aad-len ctlen))
   (let* ((expanded-key
           (cond ((= (length key) 24) (expand-key-192 key))
                 (t (error "Invalid AES key length: ~D" (length key)))))

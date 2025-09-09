@@ -596,14 +596,16 @@ Each block is padded by aes192-ecb-encrypt-block if needed."
          (plaintext (hex-string-to-byte-vector "49aabe67da5322b6e11d63b78b5a0e15"))
          (ciphertext (aes192-ecb-encrypt plaintext key t nil))
          (expanded-key (expand-key-192 key))
-         (recovered (make-array 0 :element-type '(unsigned-byte 8))))
+         (recovered (make-array 0 :element-type '(unsigned-byte 8)))
+	 (previous-block))
+    (declare (ignorable previous-block))
     (loop for i from 0 below (length ciphertext) by 16
           for block = (subseq ciphertext i (+ i 16))
           for decrypted = (aes192-ecb-decrypt-block block expanded-key t nil)
-          do (setf recovered
+          do (setq recovered
                    (concatenate '(vector (unsigned-byte 8)) recovered decrypted)
-              previous-block block))
-    (setf recovered (maybe-unpad-pkcs7 recovered 16))
+		   previous-block block))
+    (setq recovered (maybe-unpad-pkcs7 recovered 16))
     (format t "~%ECB Decrypt Block Test Result: ~A~%" (equalp plaintext recovered))
     (format t "         Ciphertext: ~{~2,'0X~^~}~%" (coerce ciphertext 'list))
     (format t "Expected Ciphertext: ~a~%" (string-upcase "21c8229a4dceaf533fe4e96eced482a6"))

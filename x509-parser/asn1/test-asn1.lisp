@@ -19,7 +19,7 @@
 (defun test-tbs-schema ()
   (let ((stream (read-file-as-byte-stream "x509-parser/asn1/test-cert.der"))
 	(schema *certificate-schema*))
-    (declare (ignore schema))
+    (declare (ignorable schema))
     (let ((parsed (parse-asn1-element stream)))
       ;;(print-asn1-tree parsed)
       (let ((tbs (first (getf parsed :value)))) ; ← this is the TBSCertificate
@@ -62,7 +62,7 @@
 (defun test-cert-1 ()
   (let ((stream (read-file-as-byte-stream "x509-parser/asn1/test-cert.der"))
 	(schema *certificate-schema*))
-    (declare (ignore schema))
+    (declare (ignorable schema))
     ;;(print-asn1-tree parsed)
     (let* ((parsed (parse-asn1-element stream))
 	   (tbs (first (getf parsed :value))) ;; ← this is the TBSCertificate
@@ -74,6 +74,7 @@
 	   (spki (nth 6 (getf tbs :value)))
 	   (ext-block (extract-extensions-block tbs))
 	   (tbs-raw (extract-raw-tbs (byte-stream-data stream) parsed)))
+      (declare (ignorable tbs-start tbs-length tbs-total-length tbs-raw))
       (let* ((extracted-subject (extract-subject-fields subject))
 	     (extracted-issuer (extract-subject-fields issuer))
 	     (info (extract-public-key-info spki))
@@ -124,7 +125,7 @@
 (defun test-cert-2 ()
   (let ((stream (read-file-as-byte-stream "x509-parser/asn1/test-cert.der"))
 	(schema *certificate-schema*))
-    (declare (ignore schema))
+    (declare (ignorable schema))
     ;;(print-asn1-tree parsed)
     (let* ((parsed (parse-asn1-element stream))
 	   (tbs (first (getf parsed :value))) ;; ← this is the TBSCertificate
@@ -152,6 +153,7 @@
            (digest-info-bytes (strip-pkcs1-padding decrypted-bytes))
            (digest-info (parse-digest-info digest-info-bytes))
 	   (ext-block (extract-extensions-block tbs))) ;; subject is the 6th element in TBSCertificate
+      (declare (ignorable tbs-start tbs-length tbs-total-length issuer expected-hash))
       (let* ((extracted-subject (extract-subject-fields subject))
 	     (extracted-issuer (extract-subject-fields issuer))
 	     (info (extract-public-key-info spki))
@@ -206,6 +208,7 @@
 	  (format t "~%Algorithm Params               : ~A" (getf sig-algo :params))))
       
       (let ((hash (sha256 tbs-bytes)))
+	(declare (ignorable hash))
 	(let ((constructed-digest-info (build-digest-info (getf digest-info :hash))))
 	  ;; Compare this to the decrypted signature bytes
 	  (format t "~%DigestInfo OID                 : ~A"
@@ -226,7 +229,7 @@
 (defun test-cert-3 ()
   (let ((stream (read-file-as-byte-stream "x509-parser/asn1/test-cert.der"))
 	(schema *certificate-schema*))
-    (declare (ignore schema))
+    (declare (ignorable schema))
     ;;(print-asn1-tree parsed)
     (let* ((parsed (parse-asn1-element stream))
 	   (tbs (first (getf parsed :value))) ;; ← this is the TBSCertificate
@@ -253,6 +256,7 @@
            (decrypted-bytes (integer-to-byte-vector decrypted-int modulus-size))
            (digest-info-bytes (strip-pkcs1-padding decrypted-bytes))
            (digest-info (parse-digest-info digest-info-bytes)))
+      (declare (ignorable tbs-start tbs-length tbs-total-length subject issuer expected-hash))
       (format t "~%DigestInfo OID                 : ~A" (getf digest-info :algorithm-oid))
       (format t "~%DigestInfo Hash                : ~A" (byte-vector-to-hex-string (getf digest-info :hash)))
       (format t "~%TBS full                       : ~A"

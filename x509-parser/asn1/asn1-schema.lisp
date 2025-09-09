@@ -30,6 +30,8 @@
     (:sequence :object-id :null) ;; signatureAlgorithm
     :bit-string)) ;; signatureValue
 
+(declaim (ftype function match-schema))
+
 (defun match-sequence (elements schema depth)
   (if (/= (length elements) (length schema))
       (progn

@@ -7,7 +7,7 @@
 	:asn1-types :asn1-schema :asn1-parser :asn1-encoders :asn1-extractors)
   (:export :get-tagged :get-sequence-element
 	   :parse-version :parse-serial-number :parse-algorithm
-	   :parse-bit-string :parse-validity :maybe-parse-extensions :parse-extension))
+	   :parse-bit-string :parse-validity :parse-extension :maybe-parse-extensions))
 
 (in-package :x509-fields)
 
@@ -40,12 +40,6 @@
     (list :not-before (parse-time not-before)
           :not-after  (parse-time not-after))))
 
-(defun maybe-parse-extensions (tbs-cert)
-  (let ((ext-tagged (get-tagged tbs-cert 3))) ;; usually tag [3]
-    (when ext-tagged
-      (let ((ext-seq (second ext-tagged)))
-        (mapcar #'parse-extension ext-seq)))))
-
 (defun parse-extension (ext-seq)
   (let* ((oid (get-sequence-element ext-seq 0))
          (name (oid->name oid))
@@ -59,3 +53,9 @@
                     ;; Add more known extensions here
                     (otherwise value))))
     (list :oid oid :name name :critical critical :value decoded)))
+
+(defun maybe-parse-extensions (tbs-cert)
+  (let ((ext-tagged (get-tagged tbs-cert 3))) ;; usually tag [3]
+    (when ext-tagged
+      (let ((ext-seq (second ext-tagged)))
+        (mapcar #'parse-extension ext-seq)))))

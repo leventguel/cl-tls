@@ -1,7 +1,9 @@
 (defpackage :der-parser
   (:use :cl :der-utils)
   (:export :read-der-file :*server-der* :*cert-structure* :*spki-structure* :*pubkey-bitstring* :*pubkey-bytes*
-	   :*rsa-key* :*oid-map* :parse-der-integer :parse-der-length :parse-der-sequence :parse-der-element
+	   :*rsa-key* :*oid-map*
+	   :parse-der-integer :parse-der-length :parse-object-id
+	   :parse-der-sequence :parse-der-element
 	   :parse-time :maybe-decode-oid :decode-attribute-pair :find-subject-cn
 	   :der-tag-type :der-oid->name :context-specific-constructed-p :pretty-print-der-raw :pretty-print-der
 	   :der-extract-rsa-public-key :find-subject-public-key-info))
@@ -59,6 +61,30 @@
                                 :initial-value 0)))
             (values length (+ 1 offset num-bytes)))))))
 
+(defun parse-object-id (bytes)
+  "Parse a DER-encoded OBJECT IDENTIFIER from a byte vector."
+  (let ((tag (aref bytes 0)))
+    (unless (= tag #x06)
+      (error "Expected OBJECT IDENTIFIER tag"))
+    (multiple-value-bind (length offset) (parse-der-length bytes 1)
+      (let* ((oid-bytes (subseq bytes offset (+ offset length)))
+             (first-byte (aref oid-bytes 0))
+             (first (floor first-byte 40))
+             (second (mod first-byte 40))
+             (components (list first second))
+             (value 0)
+             (result '()))
+        ;; Iterate over remaining bytes
+        (loop for i from 1 below (length oid-bytes)
+              for b = (aref oid-bytes i)
+              do (setf value (+ (* value 128) (logand b #x7F)))
+              (unless (logbitp 7 b)
+                (push value result)
+                (setf value 0)))
+        (format nil "~{~A~^.~}" (append components (nreverse result)))))))
+
+(declaim (ftype function parse-der-sequence))
+
 ;; Recursive
 (defun parse-der-element (bytes offset)
   "Parse a single DER element starting at offset. Returns (value . new-offset)."
@@ -91,7 +117,6 @@
 		(setf offset new-offset)))
         (nreverse elements)))))
 
-
 (defun parse-time (time-node)
   (let ((raw (second time-node))) ;; assuming (tag . value)
     (cond
@@ -104,6 +129,33 @@
                (subseq raw 0 4) (subseq raw 4 6) (subseq raw 6 8)
                (subseq raw 8 10) (subseq raw 10 12) (subseq raw 12 14)))
       (t raw))))
+
+(defun find-subject-cn (cert)
+  (some (lambda (entry)
+          (and (listp entry)
+               (some (lambda (subentry)
+                       (and (listp subentry)
+                            (equal (getf subentry :oid) "2.5.4.3")
+                            (getf subentry :value)))
+                     entry)))
+        cert))
+
+(defun der-tag-type (tag)
+  (case tag
+    (#x30 :sequence)
+    (#x31 :set)
+    (#x02 :integer)
+    (#x06 :object-id)
+    (#x13 :printable-string)
+    (#x0C :utf8-string)
+    (#x17 :utc-time)
+    (#x16 :ia5-string)
+    (#x05 :null)
+    (#x03 :bit-string)
+    (t :unknown)))
+
+(defun der-oid->name (oid)
+  (or (cdr (assoc oid *oid-map* :test #'string=)) oid))
 
 (defun maybe-decode-oid (obj)
   (when (and (listp obj)
@@ -135,55 +187,8 @@
                    (value-bytes (getf value-part :raw)))
               (format nil "~A: ~A" name (bytes-to-string value-bytes)))))))))
 
-(defun find-subject-cn (cert)
-  (some (lambda (entry)
-          (and (listp entry)
-               (some (lambda (subentry)
-                       (and (listp subentry)
-                            (equal (getf subentry :oid) "2.5.4.3")
-                            (getf subentry :value)))
-                     entry)))
-        cert))
-
-(defun der-tag-type (tag)
-  (case tag
-    (#x30 :sequence)
-    (#x31 :set)
-    (#x02 :integer)
-    (#x06 :object-id)
-    (#x13 :printable-string)
-    (#x0C :utf8-string)
-    (#x17 :utc-time)
-    (#x16 :ia5-string)
-    (#x05 :null)
-    (#x03 :bit-string)
-    (t :unknown)))
-
-(defun der-oid->name (oid)
-  (or (cdr (assoc oid *oid-map* :test #'string=)) oid))
-
 (defun context-specific-constructed-p (tag)
   (and (>= tag #xA0) (<= tag #xBF)))
-
-(defun pretty-print-der-raw (obj &optional (indent 0))
-  (let ((prefix (make-string indent :initial-element #\Space)))
-    (cond
-      ((listp obj)
-       (format t "~%~A(" prefix)
-       (dolist (item obj)
-         (pretty-print-der item (+ indent 2)))
-       (format t "~%~A)" prefix))
-      ((vectorp obj)
-       (format t "~%~A#(" prefix)
-       (dotimes (i (length obj))
-         (pretty-print-der (aref obj i) (+ indent 2)))
-       (format t "~%~A)" prefix))
-      ((stringp obj)
-       (format t "~%~A~S" prefix obj))
-      ((symbolp obj)
-       (format t "~%~A~A" prefix obj))
-      (t
-       (format t "~%~A~A" prefix obj)))))
 
 (defun pretty-print-der (obj &optional (indent 0))
   (let ((prefix (make-string indent :initial-element #\Space)))
@@ -249,6 +254,26 @@
        (dolist (item obj)
 	 (pretty-print-der item (+ indent 2)))
        (format t "~%~A)" prefix)))))
+
+(defun pretty-print-der-raw (obj &optional (indent 0))
+  (let ((prefix (make-string indent :initial-element #\Space)))
+    (cond
+      ((listp obj)
+       (format t "~%~A(" prefix)
+       (dolist (item obj)
+         (pretty-print-der item (+ indent 2)))
+       (format t "~%~A)" prefix))
+      ((vectorp obj)
+       (format t "~%~A#(" prefix)
+       (dotimes (i (length obj))
+         (pretty-print-der (aref obj i) (+ indent 2)))
+       (format t "~%~A)" prefix))
+      ((stringp obj)
+       (format t "~%~A~S" prefix obj))
+      ((symbolp obj)
+       (format t "~%~A~A" prefix obj))
+      (t
+       (format t "~%~A~A" prefix obj)))))
 
 (defun der-extract-rsa-public-key (cert-structure)
   "Extract RSA modulus and exponent from parsed certificate structure."

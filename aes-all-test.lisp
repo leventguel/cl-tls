@@ -26,12 +26,19 @@
 (load "rsp/des-mac-parser.lisp")
 (load "rsp/test-des-mac.lisp")
 (load "x509-parser/der/der-system.lisp")
-(load "x509-parser/crypto/rsa-system.lisp")
 (load "x509-parser/asn1/asn1-system.lisp")
+(load "x509-parser/crypto/rsa-system.lisp")
 (load "x509-parser/x509/x509-system.lisp")
 (der-system::load-der)
-(rsa-system::load-rsa)
 (asn1-system::load-asn1)
+(rsa-system::load-rsa)
+;; we can't test asn1 before having rsa loaded so we can't load it in the asn1-system directly
+(load "x509-parser/asn1/test-asn1.lisp")
+(test-asn1::run-asn1-tests)
+(test-asn1::test-tbs-schema)
+(test-asn1::test-cert-1)
+(test-asn1::test-cert-2)
+(test-asn1::test-cert-3)
 (x509-system::load-x509)
 
 (defpackage :tls-aes-all-test

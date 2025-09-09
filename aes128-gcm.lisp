@@ -7,6 +7,7 @@
 (defun gctr-128 (key icb plaintext)
   (let ((blocks (chunk-all plaintext))
         (out '()))
+    (declare (ignorable out))
     (loop for blk in blocks
           for ctr = (inc-counter icb) then (inc-counter ctr)
           for ek = (aes128-ecb-encrypt ctr key t nil)
@@ -15,6 +16,7 @@
 
 (defun aes128-gcm-encrypt (plaintext key iv &optional (aad #()) (taglen 128) (aad-len 0) (ctlen 0) verbose)
   "Encrypts plaintext using AES-GCM. Returns (ciphertext truncated-tag)."
+  (declare (ignorable aad-len ctlen))
   (let* ((expanded-key
           (cond ((= (length key) 16) (expand-key-128 key))
                 (t (error "Invalid AES key length: ~D" (length key)))))
@@ -40,7 +42,7 @@
            (s (ghash h ghash-in))
            (tag-base (aes128-ecb-encrypt j0 expanded-key t nil))
            (full-tag (make-array 16 :element-type '(unsigned-byte 8))))
-
+      
       (when (and (< iv-bitlen 64) verbose)
 	(warn "IV too short — may weaken GCM security"))
       
@@ -66,6 +68,7 @@
 
 (defun aes128-gcm-decrypt (ciphertext key iv tag &optional (aad #()) (taglen 128) (aad-len 0) (ctlen 0) verbose)
   "Decrypts AES-GCM ciphertext. Returns plaintext if tag verifies, else error."
+  (declare (ignorable aad-len ctlen))
   (let* ((expanded-key
           (cond ((= (length key) 16) (expand-key-128 key))
                 (t (error "Invalid AES key length: ~D" (length key)))))
